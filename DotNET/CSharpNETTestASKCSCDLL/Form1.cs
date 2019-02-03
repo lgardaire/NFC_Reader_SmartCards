@@ -130,22 +130,22 @@ namespace CSharpNETTestASKCSCDLL
                                         } 
                                     }
 
-                                    int startIndex = 3;
-                                    int totalLength = result.ToArray().Length;
+                                    long startIndex = 3;
+                                    int totalLength = result.Count;
                                     List<MessageContent> messages = new List<MessageContent>();
                                     while (startIndex < totalLength)
                                     {
                                         List<MessageContent> temporaryResult = analyseData(result, startIndex);
                                         messages.AddRange(temporaryResult);
-                                        if (temporaryResult.ToArray().Length != 0) { 
-                                            startIndex = temporaryResult[temporaryResult.ToArray().Length - 1].lastIndex;
+                                        if (temporaryResult.Count != 0) { 
+                                            startIndex = temporaryResult[temporaryResult.Count - 1].lastIndex;
                                         } else
                                         {
                                             break;
                                         }
                                     }
                                     textBox1.Clear();
-                                    for(int i = 0; i < messages.ToArray().Length; i++)
+                                    for(int i = 0; i < messages.Count; i++)
                                     {
                                         if(messages[i].language != "")
                                         {
@@ -189,38 +189,38 @@ namespace CSharpNETTestASKCSCDLL
             return binary[4] == '1';
         }
 
-        private List<MessageContent> analyseData(List<Byte> content, int startIndex)
+        private List<MessageContent> analyseData(List<Byte> content, long startIndex)
         {
             try { 
-                BinaryInformations binaryInfos = new BinaryInformations(content[startIndex]);
+                BinaryInformations binaryInfos = new BinaryInformations(content.ToArray()[startIndex]);
                 if (binaryInfos.isWellKnownType())
                 {
                     int payLoadLengthLength = binaryInfos.getLengthOfPayloadLength();
                     bool idLengthPresent = binaryInfos.isIdLengthPresent();
 
-                    int payloadLength = convertByte(content.GetRange(startIndex + 2, payLoadLengthLength));
-                    int typeLength = convertByte(content[startIndex + 1]);
+                    long payloadLength = convertByte(getSubListFrom(content.ToArray(), startIndex + 2, payLoadLengthLength));
+                    long typeLength = convertByte(content.ToArray()[startIndex + 1]);
                     int idLengthLength = idLengthPresent ? 1 : 0;
                 
-                    int type = -1;
+                    long type = -1;
                     if (typeLength != 0)
                     {
-                        type = convertSublistByteToInt(content, startIndex + payLoadLengthLength + idLengthLength + 2, typeLength);
+                        type = convertSublistByteToLong(content, startIndex + payLoadLengthLength + idLengthLength + 2, typeLength);
                     }
 
-                    int idLength = 0;
+                    long idLength = 0;
                     if (idLengthLength != 0)
                     {
-                        idLength = convertSublistByteToInt(content, startIndex + payLoadLengthLength + 1, idLengthLength);
+                        idLength = convertSublistByteToLong(content, startIndex + payLoadLengthLength + 1, idLengthLength);
                     }
 
-                    int payloadStartIndex = startIndex + payLoadLengthLength + idLengthLength + typeLength + idLength + 2;
-                    List<Byte> payload = content.GetRange(payloadStartIndex, payloadLength);
+                    long payloadStartIndex = startIndex + payLoadLengthLength + idLengthLength + typeLength + idLength + 2;
+                    List<Byte> payload = getSubListFrom(content.ToArray(), payloadStartIndex, payloadLength);
 
                     if (type == 0x5370) //is SmartPoster
                     {
                         List<MessageContent> result = new List<MessageContent>();
-                        int lastIndex = 0;
+                        long lastIndex = 0;
                         while(lastIndex < payloadLength)
                         {
                             List<MessageContent> messContent = analyseData(payload, lastIndex);
@@ -243,27 +243,37 @@ namespace CSharpNETTestASKCSCDLL
             }
         }
 
-        private int convertSublistByteToInt(List<byte> list, int startIndex, int length)
+        private long convertSublistByteToLong(List<byte> list, long startIndex, long length)
         {
-            List<Byte> sublist = list.GetRange(startIndex, length);
+            List<Byte> sublist = getSubListFrom(list.ToArray(), startIndex, length);
             sublist.Reverse();
             return convertByte(sublist);
         }
 
-        private int convertByte(List<Byte> list)
+        private long convertByte(List<Byte> list)
         {
-            while (list.ToArray().Length < 4)
+            while (list.Count < 4)
             {
                 list.Add(0x00);
             }
             return BitConverter.ToInt32(list.ToArray(), 0);
         }
 
-        private int convertByte(Byte byte1)
+        private long convertByte(Byte byte1)
         {
             List<Byte> tmp = new List<Byte>();
             tmp.Add(byte1);
             return convertByte(tmp);
+        }
+
+        private List<Byte> getSubListFrom(Byte[] list, long startIndex, long length)
+        {
+            List<Byte> sublist = new List<Byte>();
+            for(long i = startIndex ; i < startIndex+length; i++)
+            {
+                sublist.Add(list[i]);
+            }
+            return sublist;
         }
     }
 }

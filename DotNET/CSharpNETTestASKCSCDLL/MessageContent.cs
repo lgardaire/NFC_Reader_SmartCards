@@ -8,12 +8,12 @@ namespace CSharpNETTestASKCSCDLL
 {
     class MessageContent
     {
-        public int type; //text type 0x54, URI type 0x55
+        public long type; //text type 0x54, URI type 0x55
         public String payload;
-        public int lastIndex;
+        public long lastIndex;
         public String language = "";
 
-        public MessageContent(List<byte> payload, int type, int lastIndex)
+        public MessageContent(List<byte> payload, long type, long lastIndex)
         {
             this.type = type;
             if (type == 0x55) //URI type
@@ -32,7 +32,7 @@ namespace CSharpNETTestASKCSCDLL
         private String parseURIPayload(List<Byte> payload)
         {
             Dictionary<Byte, String> firstByteValue = setDictionaryFirstByte();
-            return firstByteValue[payload[0]] + Encoding.ASCII.GetString(payload.GetRange(1, payload.ToArray().Length - 1).ToArray());
+            return firstByteValue[payload[0]] + Encoding.ASCII.GetString(payload.GetRange(1, payload.Count - 1).ToArray());
         }
 
         private Tuple<String, String> parseTextPayload(List<Byte> payload)
@@ -44,11 +44,11 @@ namespace CSharpNETTestASKCSCDLL
             String language = Encoding.ASCII.GetString(payload.GetRange(1, IANALanguageLength).ToArray());
             if (checkUTFValue(infos[0]) == 8)
             {
-                result += Encoding.ASCII.GetString(payload.GetRange(startIndex, payload.ToArray().Length - startIndex).ToArray());
+                result += Encoding.ASCII.GetString(payload.GetRange(startIndex, payload.Count - startIndex).ToArray());
             }
             else
             {
-                result += Encoding.Unicode.GetString(payload.GetRange(startIndex, payload.ToArray().Length - startIndex).ToArray());
+                result += Encoding.Unicode.GetString(payload.GetRange(startIndex, payload.Count - startIndex).ToArray());
             }
             return new Tuple<String, String>(result, language);
         }
