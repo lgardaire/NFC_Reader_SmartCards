@@ -91,15 +91,61 @@ namespace CSharpNETTestASKCSCDLL
                             Status = AskReaderLib.CSC.CSC_ISOCommand(byBuffIn, byBuffIn.Length, byBuffOut, ref iLenOut);
                             if ((Status == AskReaderLib.CSC.RCSC_Ok) && (iLenOut > 2) && (byBuffOut[iLenOut - 2] == 0x90) && (byBuffOut[iLenOut - 1] == 0x00))
                             {
-                                int maxLe = Convert.ToInt32(new Byte[]{maxLe1, maxLe2 });
-                                int maxSize = Convert.ToInt32(new Byte[] { maxSize1, maxSize2 });
-                                
-                                iLenOut = 300;
-                                byBuffIn = new byte[] { 0x00, 0xB0, 0x00, 0x00,  };
+                                int maxLe = Convert.ToInt32(maxLe1.ToString() + maxLe2.ToString());
+                                int maxSize = Convert.ToInt32(maxSize1.ToString() + maxSize2.ToString());
+
+                                iLenOut = 3;
+                                byBuffIn = new byte[] { 0x00, 0xB0, 0x00, 0x00, 0x03 };
                                 Status = AskReaderLib.CSC.CSC_ISOCommand(byBuffIn, byBuffIn.Length, byBuffOut, ref iLenOut);
-                                if ((Status == AskReaderLib.CSC.RCSC_Ok) && (iLenOut > 2) && (byBuffOut[iLenOut - 2] == 0x90) && (byBuffOut[iLenOut - 1] == 0x00))
+                                if ((Status == AskReaderLib.CSC.RCSC_Ok) && (iLenOut > 2))
                                 {
-                                    Console.Write(byBuffOut);
+
+                                    int maxSizeToRead = Convert.ToInt32(byBuffOut[1].ToString() + byBuffOut[2].ToString());
+
+                                    List<Byte> result = new List<Byte>();
+                                    if (maxSizeToRead < maxLe)
+                                    {
+                                        iLenOut = maxLe;
+                                        Byte[] tmp = BitConverter.GetBytes(maxSizeToRead+2);
+                                        byBuffIn = new byte[] { 0x00, 0xB0, 0x00, 0x00, tmp[0] };
+                                        Status = AskReaderLib.CSC.CSC_ISOCommand(byBuffIn, byBuffIn.Length, byBuffOut, ref iLenOut);
+                                        if ((Status == AskReaderLib.CSC.RCSC_Ok) && (iLenOut > 2) && (byBuffOut[iLenOut - 2] == 0x90) && (byBuffOut[iLenOut - 1] == 0x00))
+                                        {
+                                            result.AddRange(byBuffOut);
+                                        }
+                                    } else
+                                    {
+                                    
+                                        int iterations = (maxSizeToRead / maxLe) + 1;
+                                        for(int i = 0; i < iterations; i++)
+                                        {
+                                            Byte[] offset = BitConverter.GetBytes(i * maxLe + 3);
+                                            iLenOut = maxLe + 3;
+                                            byBuffIn = new byte[] { 0x00, 0xB0, offset[0], offset[1], maxLe2 };
+                                            Status = AskReaderLib.CSC.CSC_ISOCommand(byBuffIn, byBuffIn.Length, byBuffOut, ref iLenOut);
+                                            if ((Status == AskReaderLib.CSC.RCSC_Ok) && (iLenOut > 2) && (byBuffOut[iLenOut - 2] == 0x90) && (byBuffOut[iLenOut - 1] == 0x00))
+                                            {
+                                                result.AddRange(byBuffOut);
+                                            }
+                                        } 
+                                    }
+
+                                    int startIndex = 3;
+                                    int totalLength = result.ToArray().Length;
+                                    List<MessageContent> messages = new List<MessageContent>();
+                                    while (startIndex < totalLength)
+                                    {
+                                        List<MessageContent> temporaryResult = analyseData(result, startIndex);
+                                        messages.AddRange(temporaryResult);
+                                        if (temporaryResult.ToArray().Length != 0) { 
+                                            startIndex = temporaryResult[temporaryResult.ToArray().Length - 1].lastIndex;
+                                        } else
+                                        {
+                                            break;
+                                        }
+                                    }
+                                    Console.Write("End of reading");
+
                                 }
                             }
                         }
@@ -123,6 +169,88 @@ namespace CSharpNETTestASKCSCDLL
                 MessageBox.Show("Error on trying do deal with reader");
             }
             AskReaderLib.CSC.Close();
+        }
+
+        private bool checkId(string binary)
+        {
+            return binary[4] == '1';
+        }
+
+        private List<MessageContent> analyseData(List<Byte> content, int startIndex)
+        {
+            try { 
+                BinaryInformations binaryInfos = new BinaryInformations(content[startIndex]);
+                if (binaryInfos.isWellKnownType())
+                {
+                    int payLoadLengthLength = binaryInfos.getLengthOfPayloadLength();
+                    bool idLengthPresent = binaryInfos.isIdLengthPresent();
+
+                    int payloadLength = convertByte(content.GetRange(startIndex + 2, payLoadLengthLength));
+                    int typeLength = convertByte(content[startIndex + 1]);
+                    int idLengthLength = idLengthPresent ? 1 : 0;
+                
+                    int type = -1;
+                    if (typeLength != 0)
+                    {
+                        type = convertSublistByteToInt(content, startIndex + payLoadLengthLength + idLengthLength + 2, typeLength);
+                    }
+
+                    int idLength = 0;
+                    if (idLengthLength != 0)
+                    {
+                        idLength = convertSublistByteToInt(content, startIndex + payLoadLengthLength + 1, idLengthLength);
+                    }
+
+                    int payloadStartIndex = startIndex + payLoadLengthLength + idLengthLength + typeLength + idLength + 2;
+                    List<Byte> payload = content.GetRange(payloadStartIndex, payloadLength);
+
+                    if (type == 0x5370) //is SmartPoster
+                    {
+                        List<MessageContent> result = new List<MessageContent>();
+                        int lastIndex = 0;
+                        while(lastIndex < payloadLength)
+                        {
+                            List<MessageContent> messContent = analyseData(payload, lastIndex);
+                            result.Add(messContent[0]);
+                            lastIndex = messContent[0].lastIndex;
+                        }
+                        return result;
+                    } else
+                    {
+                        List<MessageContent> messageResult = new List<MessageContent>();
+                        messageResult.Add(new MessageContent(payload, type, payloadStartIndex+payloadLength));
+                        return messageResult;
+                    }
+                } else
+                {
+                    return new List<MessageContent>();
+                } 
+            } catch {
+                return new List<MessageContent>();
+            }
+        }
+
+        private int convertSublistByteToInt(List<byte> list, int startIndex, int length)
+        {
+            List<Byte> sublist = list.GetRange(startIndex, length);
+            sublist.Reverse();
+            return convertByte(sublist);
+        }
+
+        private int convertByte(List<Byte> list)
+        {
+            while (list.ToArray().Length < 4)
+            {
+                list.Add(0x00);
+            }
+            return BitConverter.ToInt32(list.ToArray(), 0);
+        }
+
+        private int convertByte(Byte byte1)
+        {
+            List<Byte> tmp = new List<Byte>();
+            tmp.Add(byte1);
+            return convertByte(tmp);
         }
     }
 }
