@@ -144,6 +144,19 @@ namespace CSharpNETTestASKCSCDLL
                                             break;
                                         }
                                     }
+                                    textBox1.Clear();
+                                    for(int i = 0; i < messages.ToArray().Length; i++)
+                                    {
+                                        if(messages[i].language != "")
+                                        {
+                                            textBox1.AppendText(messages[i].payload + " (Language: " + messages[i].language + ")");
+                                            textBox1.AppendText(Environment.NewLine);
+                                        } else
+                                        {
+                                            textBox1.AppendText(messages[i].payload);
+                                            textBox1.AppendText(Environment.NewLine);
+                                        }
+                                    }
                                     Console.Write("End of reading");
 
                                 }

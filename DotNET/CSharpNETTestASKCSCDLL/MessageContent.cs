@@ -11,31 +11,96 @@ namespace CSharpNETTestASKCSCDLL
         public int type; //text type 0x54, URI type 0x55
         public String payload;
         public int lastIndex;
+        public String language = "";
 
         public MessageContent(List<byte> payload, int type, int lastIndex)
         {
             this.type = type;
-            this.payload = parsePayload(payload);
+            if (type == 0x55) //URI type
+            {
+                this.payload = parseURIPayload(payload);
+            } else if (type == 0x54) //text type 
+            {
+                Tuple<String, String> tmp = parseTextPayload(payload);
+                this.payload = tmp.Item1;
+                this.language = tmp.Item2;
+            }
+            
             this.lastIndex = lastIndex;
         }
 
-        private String parsePayload(List<Byte> payload)
+        private String parseURIPayload(List<Byte> payload)
+        {
+            Dictionary<Byte, String> firstByteValue = setDictionaryFirstByte();
+            return firstByteValue[payload[0]] + Encoding.ASCII.GetString(payload.GetRange(1, payload.ToArray().Length - 1).ToArray());
+        }
+
+        private Tuple<String, String> parseTextPayload(List<Byte> payload)
         {
             String result = "";
-            if (type == 0x55)
+            String infos = Convert.ToString(payload[0], 2).PadLeft(8, '0');
+            int IANALanguageLength = Convert.ToInt32(infos.Substring(2));
+            int startIndex = IANALanguageLength + 1;
+            String language = Encoding.ASCII.GetString(payload.GetRange(1, IANALanguageLength).ToArray());
+            if (checkUTFValue(infos[0]) == 8)
             {
-                Dictionary<Byte, String> firstByteValue = setDictionaryFirstByte();
-                result += firstByteValue[payload[0]];
-                result += System.Text.Encoding.ASCII.GetString(payload.GetRange(1, payload.ToArray().Length-1).ToArray());
+                result += Encoding.ASCII.GetString(payload.GetRange(startIndex, payload.ToArray().Length - startIndex).ToArray());
             }
-            else // should be a text type 0x54
+            else
             {
-                result += System.Text.Encoding.ASCII.GetString(payload.ToArray());
+                result += Encoding.Unicode.GetString(payload.GetRange(startIndex, payload.ToArray().Length - startIndex).ToArray());
             }
-            return result;
+            return new Tuple<String, String>(result, language);
+        }
+
+        private int checkUTFValue(Char bit)
+        {
+            return bit == '0' ? 8 : 16;
         }
 
         private Dictionary<Byte, String> setDictionaryFirstByte()
+        {
+            Dictionary<Byte, String> firstByteValue = new Dictionary<byte, string>();
+            firstByteValue[0x00] = "";
+            firstByteValue[0x01] = "http://www.";
+            firstByteValue[0x02] = "https://www.";
+            firstByteValue[0x03] = "http://";
+            firstByteValue[0x04] = "https://";
+            firstByteValue[0x05] = "tel:";
+            firstByteValue[0x06] = "mailto:";
+            firstByteValue[0x07] = "ftp://anonymous:anonymous@";
+            firstByteValue[0x08] = "ftp://ftp.";
+            firstByteValue[0x09] = "ftps://";
+            firstByteValue[0x0A] = "sftp://";
+            firstByteValue[0x0B] = "smb://";
+            firstByteValue[0x0C] = "nfs://";
+            firstByteValue[0x0D] = "ftp://";
+            firstByteValue[0x0E] = "dav://";
+            firstByteValue[0x0F] = "news:";
+            firstByteValue[0x10] = "telnet://";
+            firstByteValue[0x11] = "imap:";
+            firstByteValue[0x12] = "rtsp://";
+            firstByteValue[0x13] = "urn:";
+            firstByteValue[0x14] = "pop:";
+            firstByteValue[0x15] = "sip:";
+            firstByteValue[0x16] = "sips:";
+            firstByteValue[0x17] = "tftp:";
+            firstByteValue[0x18] = "btspp://";
+            firstByteValue[0x19] = "btl2cap://";
+            firstByteValue[0x1A] = "btgoep://";
+            firstByteValue[0x1B] = "tcpobex://";
+            firstByteValue[0x1C] = "irdaobex://";
+            firstByteValue[0x1D] = "file://";
+            firstByteValue[0x1E] = "urn:epc:id:";
+            firstByteValue[0x1F] = "urn:epc:tag:";
+            firstByteValue[0x20] = "urn:epc:pat:";
+            firstByteValue[0x21] = "urn:epc:raw:";
+            firstByteValue[0x22] = "urn:epc:";
+            firstByteValue[0x23] = "urn:nfc:";
+            return firstByteValue;
+        }
+
+        private Dictionary<Byte, String> setDictionaryLanguage()
         {
             Dictionary<Byte, String> firstByteValue = new Dictionary<byte, string>();
             firstByteValue[0x00] = "";

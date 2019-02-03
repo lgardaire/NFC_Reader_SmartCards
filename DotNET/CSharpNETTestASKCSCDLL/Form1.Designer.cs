@@ -32,6 +32,7 @@
             this.txtCard = new System.Windows.Forms.TextBox();
             this.txtCom = new System.Windows.Forms.TextBox();
             this.Label1 = new System.Windows.Forms.Label();
+            this.textBox1 = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
             // Button1
@@ -70,11 +71,22 @@
             this.Label1.TabIndex = 4;
             this.Label1.Text = "COM:";
             // 
+            // textBox1
+            // 
+            this.textBox1.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            this.textBox1.Location = new System.Drawing.Point(44, 78);
+            this.textBox1.Multiline = true;
+            this.textBox1.Name = "textBox1";
+            this.textBox1.ReadOnly = true;
+            this.textBox1.Size = new System.Drawing.Size(367, 195);
+            this.textBox1.TabIndex = 7;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(428, 71);
+            this.ClientSize = new System.Drawing.Size(428, 295);
+            this.Controls.Add(this.textBox1);
             this.Controls.Add(this.txtCard);
             this.Controls.Add(this.txtCom);
             this.Controls.Add(this.Label1);
@@ -93,6 +105,7 @@
         internal System.Windows.Forms.TextBox txtCard;
         internal System.Windows.Forms.TextBox txtCom;
         internal System.Windows.Forms.Label Label1;
+        internal System.Windows.Forms.TextBox textBox1;
     }
 }
 
