@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">HCExplorer</string>
+    <string name="servicedesc">description</string>
+    <string name="aiddescription">aiddescription</string>
+</resources>
