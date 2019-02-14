@@ -39,7 +39,7 @@ namespace CSharpNETTestASKCSCDLL
         {
             String result = "";
             String infos = Convert.ToString(payload[0], 2).PadLeft(8, '0');
-            int IANALanguageLength = Convert.ToInt32(infos.Substring(2));
+            int IANALanguageLength = Convert.ToInt32(infos.Substring(2), 2);
             int startIndex = IANALanguageLength + 1;
             String language = Encoding.ASCII.GetString(payload.GetRange(1, IANALanguageLength).ToArray());
             if (checkUTFValue(infos[0]) == 8)

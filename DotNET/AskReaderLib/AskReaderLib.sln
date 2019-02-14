@@ -10,8 +10,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpNETTestASKCSCDLL", ".
 		{79F88A9E-7B01-4A54-BF38-2117C3AB6435} = {79F88A9E-7B01-4A54-BF38-2117C3AB6435}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpNETWriter", "..\CSharpNETWriter\CSharpNETWriter.csproj", "{AAEA5A52-0D8E-48E7-99C9-936999DA6485}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,22 +46,6 @@ Global
 		{8A53EB1E-1C20-4AAB-8B0A-F2BB46822635}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{8A53EB1E-1C20-4AAB-8B0A-F2BB46822635}.Release|Win32.ActiveCfg = Release|Any CPU
 		{8A53EB1E-1C20-4AAB-8B0A-F2BB46822635}.Release|x64.ActiveCfg = Release|Any CPU
-		{AAEA5A52-0D8E-48E7-99C9-936999DA6485}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{AAEA5A52-0D8E-48E7-99C9-936999DA6485}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AAEA5A52-0D8E-48E7-99C9-936999DA6485}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{AAEA5A52-0D8E-48E7-99C9-936999DA6485}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{AAEA5A52-0D8E-48E7-99C9-936999DA6485}.Debug|Win32.ActiveCfg = Debug|Any CPU
-		{AAEA5A52-0D8E-48E7-99C9-936999DA6485}.Debug|Win32.Build.0 = Debug|Any CPU
-		{AAEA5A52-0D8E-48E7-99C9-936999DA6485}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{AAEA5A52-0D8E-48E7-99C9-936999DA6485}.Debug|x64.Build.0 = Debug|Any CPU
-		{AAEA5A52-0D8E-48E7-99C9-936999DA6485}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AAEA5A52-0D8E-48E7-99C9-936999DA6485}.Release|Any CPU.Build.0 = Release|Any CPU
-		{AAEA5A52-0D8E-48E7-99C9-936999DA6485}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{AAEA5A52-0D8E-48E7-99C9-936999DA6485}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{AAEA5A52-0D8E-48E7-99C9-936999DA6485}.Release|Win32.ActiveCfg = Release|Any CPU
-		{AAEA5A52-0D8E-48E7-99C9-936999DA6485}.Release|Win32.Build.0 = Release|Any CPU
-		{AAEA5A52-0D8E-48E7-99C9-936999DA6485}.Release|x64.ActiveCfg = Release|Any CPU
-		{AAEA5A52-0D8E-48E7-99C9-936999DA6485}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
