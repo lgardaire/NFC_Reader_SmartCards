@@ -55,27 +55,30 @@ public class cCardService extends HostApduService {
                 if (lc == 0x02) {
                     byte[] data = Arrays.copyOfRange(apdu, 5, 5 + lc); // 5 + Lc = 7
                     byte[] ccData = {(byte) 0xE1, (byte) 0x03};
+                    byte[] ndefData = {(byte) 0x81, (byte) 0x01};
                     if (data == ccData) {
                         // TODO: 14/02/2019 CC SELECT
+                    } else if (data == ndefData) {
+                        // TODO: 14/02/2019 NDEF SELECT
                     } else {
-                        // TODO: 14/02/2019 NDEF SELECT -> data = file ID
+                        return new byte[]{(byte) 0x6A, (byte) 0x82}; // unknown AID/LID
                     }
                 } else {
                     return new byte[]{(byte) 0x67, (byte) 0x00}; // incorrect Lc
                 }
-                // TODO: 14/02/2019 SELECT FILE
             } else {
                 return new byte[]{(byte) 0x6A, (byte) 0x86}; // incorrect P1/P2 SELECT
             }
-        } else if (ins == 0xB0 || ins == 0xB1) {
+        } else if (ins == 0xB0) {
             // TODO: 14/02/2019 READ BINARY
-        } else if (ins == 0xD6 || ins == 0xD7) {
+            byte offset = apdu[2];
+        } else if (ins == 0xD6) {
             // TODO: 14/02/2019 UPDATE BINARY
         } else {
             return new byte[]{(byte) 0x6D, (byte) 0x00}; // unknown INS
         }
 
-        return new byte[]{(byte) 0x90, (byte) 0x00};
+        return new byte[]{(byte) 0x90, (byte) 0x00}; // OK
     }
 
     @Override
