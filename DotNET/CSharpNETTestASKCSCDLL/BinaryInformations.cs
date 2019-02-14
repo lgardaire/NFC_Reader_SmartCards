@@ -27,6 +27,11 @@ namespace CSharpNETTestASKCSCDLL
             }
         }
 
+        public bool isLast()
+        {
+            return binaryInfos[1] == '1';
+        }
+
         public bool isIdLengthPresent()
         {
             return binaryInfos[4] == '1';
