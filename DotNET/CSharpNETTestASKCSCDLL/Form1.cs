@@ -61,8 +61,20 @@ namespace CSharpNETTestASKCSCDLL
                 else
                     txtCom.Text = Com.ToString("X");
 
-                if (Com == 2) { 
-                    txtCard.Text = "ISO14443A-4 no Calypso";
+                if (Com == 2 | Com == 4 | Com == 8 | Com == 9 | Com == 12)
+                {
+                    if(Com == 2)
+                        txtCard.Text = "ISO14443A-4 no Calypso";
+                    else if (Com == 4)
+                        txtCard.Text = "ISOB14443B-4 Calypso";
+                    else if (Com == 8)
+                        txtCard.Text = "ISO14443A-3 ";
+                    else if (Com == 9)
+                        txtCard.Text = "ISOB14443B-4 Calypso";
+                    else if (Com == 12)
+                        txtCard.Text = "ISO14443A-4 Calypso";
+
+                    // select Application D2760000850101
                     Byte[] byBuffIn = new byte[] { 0x00, 0xA4, 0x04, 0x00, 0x07, 0xD2, 0x76, 0x00, 0x00, 0x85, 0x01, 0x01, 0x00 };
                     int iLenOut = 300;
                     Byte[] byBuffOut = new byte[iLenOut];
@@ -70,11 +82,13 @@ namespace CSharpNETTestASKCSCDLL
                     if ((Status == AskReaderLib.CSC.RCSC_Ok) && (iLenOut > 2) && (byBuffOut[iLenOut - 2] == 0x90) && (byBuffOut[iLenOut - 1] == 0x00))
                     {
                         iLenOut = 300;
+                        // select EF CC File
                         byBuffIn = new byte[] { 0x00, 0xA4, 0x00, 0x0C, 0x02, 0xE1, 0x03 };
                         Status = AskReaderLib.CSC.CSC_ISOCommand(byBuffIn, byBuffIn.Length, byBuffOut, ref iLenOut);
                         if ((Status == AskReaderLib.CSC.RCSC_Ok) && (iLenOut > 2) && (byBuffOut[iLenOut - 2] == 0x90) && (byBuffOut[iLenOut - 1] == 0x00))
                         {
                             iLenOut = 300;
+                            // Read binary CC File
                             byBuffIn = new byte[] { 0x00, 0xB0, 0x00, 0x00, 0x0F };
                             Status = AskReaderLib.CSC.CSC_ISOCommand(byBuffIn, byBuffIn.Length, byBuffOut, ref iLenOut);
                             Byte maxLe1 = byBuffOut[4];
@@ -87,6 +101,7 @@ namespace CSharpNETTestASKCSCDLL
                             Byte maxSize2 = byBuffOut[13];
 
                             iLenOut = 300;
+                            // select EF NDEF
                             byBuffIn = new byte[] { 0x00, 0xA4, 0x00, 0x0C, 0x02, lid1, lid2 };
                             Status = AskReaderLib.CSC.CSC_ISOCommand(byBuffIn, byBuffIn.Length, byBuffOut, ref iLenOut);
                             if ((Status == AskReaderLib.CSC.RCSC_Ok) && (iLenOut > 2) && (byBuffOut[iLenOut - 2] == 0x90) && (byBuffOut[iLenOut - 1] == 0x00))
@@ -95,6 +110,7 @@ namespace CSharpNETTestASKCSCDLL
                                 int maxSize = Convert.ToInt32(maxSize1.ToString() + maxSize2.ToString());
 
                                 iLenOut = 3;
+                                // read Binary NDEF
                                 byBuffIn = new byte[] { 0x00, 0xB0, 0x00, 0x00, 0x03 };
                                 Status = AskReaderLib.CSC.CSC_ISOCommand(byBuffIn, byBuffIn.Length, byBuffOut, ref iLenOut);
                                 if ((Status == AskReaderLib.CSC.RCSC_Ok) && (iLenOut > 2))
@@ -164,14 +180,6 @@ namespace CSharpNETTestASKCSCDLL
                         }
                     }
                 }
-                else if (Com == 4)
-                    txtCard.Text = "ISOB14443B-4 Calypso";
-                else if (Com == 8)
-                    txtCard.Text = "ISO14443A-3 ";
-                else if (Com == 9)
-                    txtCard.Text = "ISOB14443B-4 Calypso";
-                else if (Com == 12)
-                    txtCard.Text = "ISO14443A-4 Calypso";
                 else if (Com == 0x6F)
                     txtCard.Text = "Card not found";
                 else
