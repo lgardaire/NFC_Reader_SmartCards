@@ -15,7 +15,6 @@ import java.util.Arrays;
 
 /**
  * Created by user on 07/02/2019.
- * Renvoyer un code d'erreur != 0x9000 dans les try/catch
  */
 
 public class cCardService extends HostApduService {
@@ -38,7 +37,38 @@ public class cCardService extends HostApduService {
 
     @Override
     public byte[] processCommandApdu(byte[] apdu, Bundle bundle) {
-        return new byte[]{(byte) 0x90, (byte) 0x00}; // OK
+        byte cla = apdu[0];
+        // CLA check
+        if (cla != 0x00) {
+            return new byte[]{(byte) 0x6E, (byte) 0x00}; // unknown CLA
+        }
+        byte ins = apdu[1];
+        // INS check
+        if(ins == 0xA4){
+            // SELECT
+            byte p1 = apdu[2];
+            if(p1 == 0x04){
+                // SELECT APPLICATION
+                selectApplicationResult = selectApplication(apdu);
+                return selectApplicationResult;
+            } else if (p1 == 0x00){
+                // SELECT FILE
+                if (isOK(selectApplicationResult)) {
+                    selectFileResult = selectFile(apdu);
+                    return selectFileResult;
+                } else {
+                    return new byte[]{(byte) 0x69, (byte) 0x86}; // etat non conforme
+                }
+            } else {
+                return new byte[]{(byte) 0x6A, (byte) 0x86}; // incorrect P1/P2 SELECT
+            }
+        } else if (ins == 0xB0){
+            return isOK(selectFileResult) ? readBinary(apdu) : new byte[]{(byte) 0x69, (byte) 0x86}; // etat non conforme
+        } else if (ins == 0xD6){
+            return isOK(selectFileResult) ? updateBinary(apdu) : new byte[]{(byte) 0x69, (byte) 0x86}; // etat non conforme
+        } else {
+            return new byte[]{(byte) 0x6D, (byte) 0x00}; // unknown INS
+        }
     }
 
     @Override
@@ -48,7 +78,7 @@ public class cCardService extends HostApduService {
 
     @Override
     public void onCreate() {
-        ccFile = new File(getFilesDir(), CC_FILE_NAME);
+        createCCFile();
         for (File file : getFilesDir().listFiles()) {
             if (file.getName().equals(NDEF_FILE_NAME)) {
                 ndefFile = file;
@@ -57,6 +87,15 @@ public class cCardService extends HostApduService {
         }
         if (ndefFile == null) {
             ndefFile = new File(getFilesDir(), NDEF_FILE_NAME);
+        }
+    }
+
+    private void createCCFile() {
+        ccFile = new File(getFilesDir(), CC_FILE_NAME);
+        try {
+            new BufferedWriter(new FileWriter(ccFile)).write(CC_FILE_CONTENT);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -104,9 +143,6 @@ public class cCardService extends HostApduService {
     }
 
     public byte[] selectFile(byte[] apdu) {
-        if (!isOK(selectApplicationResult)) {
-            return new byte[]{(byte) 0x69, (byte) 0x86}; // etat non conforme
-        }
         byte cla = apdu[0];
         // CLA check
         if (cla != 0x00) {
@@ -146,9 +182,6 @@ public class cCardService extends HostApduService {
     }
 
     public byte[] readBinary(byte[] apdu) {
-        if (!isOK(selectFileResult)) {
-            return new byte[]{(byte) 0x69, (byte) 0x86}; // etat non conforme
-        }
         byte cla = apdu[0];
         // CLA check
         if (cla != 0x00) {
@@ -163,8 +196,9 @@ public class cCardService extends HostApduService {
         byte le = apdu[4];
         // TODO: 14/02/2019 check offset + le <= maxLe, sinon return 6C00
         try {
-            // TODO: 14/02/2019 also return 9000 (and display data)
-            return getFileContent(offset[0] + offset[1], le);
+            // FIXME: 14/02/2019 what should we do with the file content ?
+            System.out.println(getFileContent(offset[0] + offset[1], le));
+            return new byte[]{(byte) 0x90, (byte) 0x00}; // OK
         } catch (IOException e) {
             e.printStackTrace();
             return new byte[]{(byte) 0x42, (byte) 0x69}; // exception management
@@ -172,9 +206,6 @@ public class cCardService extends HostApduService {
     }
 
     public byte[] updateBinary(byte[] apdu) {
-        if (!isOK(selectFileResult)) {
-            return new byte[]{(byte) 0x69, (byte) 0x86}; // etat non conforme
-        }
         byte cla = apdu[0];
         // CLA check
         if (cla != 0x00) {
@@ -211,9 +242,9 @@ public class cCardService extends HostApduService {
      *
      * @return
      */
-    private byte[] getFileContent(int offset, int le) throws IOException {
+    private String getFileContent(int offset, int le) throws IOException {
         // TODO: 14/02/2019 check this
-        return getFileAsString(selectedFile).substring(offset, offset + le).getBytes(Charset.forName("UTF-8"));
+        return getFileAsString(selectedFile).substring(offset, offset + le); //.getBytes(Charset.forName("UTF-8"));
     }
 
     private String getFileAsString(File file) throws IOException {
