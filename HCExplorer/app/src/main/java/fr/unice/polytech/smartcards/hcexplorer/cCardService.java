@@ -32,42 +32,46 @@ public class cCardService extends HostApduService {
      */
     private File selectedFile;
 
-    private byte[] selectApplicationResult = null;
-    private byte[] selectFileResult = null;
+    private int[] selectApplicationResult = null;
+    private int[] selectFileResult = null;
 
     @Override
     public byte[] processCommandApdu(byte[] apdu, Bundle bundle) {
-        byte cla = apdu[0];
+        int[] apduUnsigned = new int[apdu.length];
+        for (byte i = 0; i < apdu.length; i++) {
+            apduUnsigned[i] = apdu[i] & 0xFF;
+        }
+        int cla = apduUnsigned[0];
         // CLA check
         if (cla != 0x00) {
-            return new byte[]{(byte) 0x6E, (byte) 0x00}; // unknown CLA
+            return intArrayToByteArray(new int[]{(int) 0x6E, (int) 0x00}); // unknown CLA
         }
-        byte ins = apdu[1];
+        int ins = apduUnsigned[1];
         // INS check
-        if(ins == 0xA4){
+        if (ins == 0xA4) {
             // SELECT
-            byte p1 = apdu[2];
-            if(p1 == 0x04){
+            int p1 = apduUnsigned[2];
+            if (p1 == 0x04) {
                 // SELECT APPLICATION
-                selectApplicationResult = selectApplication(apdu);
-                return selectApplicationResult;
-            } else if (p1 == 0x00){
+                selectApplicationResult = selectApplication(apduUnsigned);
+                return intArrayToByteArray(selectApplicationResult);
+            } else if (p1 == 0x00) {
                 // SELECT FILE
                 if (isOK(selectApplicationResult)) {
-                    selectFileResult = selectFile(apdu);
-                    return selectFileResult;
+                    selectFileResult = selectFile(apduUnsigned);
+                    return intArrayToByteArray(selectFileResult);
                 } else {
-                    return new byte[]{(byte) 0x69, (byte) 0x86}; // etat non conforme
+                    return intArrayToByteArray(new int[]{(int) 0x69, (int) 0x86}); // etat non conforme
                 }
             } else {
-                return new byte[]{(byte) 0x6A, (byte) 0x86}; // incorrect P1/P2 SELECT
+                return intArrayToByteArray(new int[]{(int) 0x6A, (int) 0x86}); // incorrect P1/P2 SELECT
             }
-        } else if (ins == 0xB0){
-            return isOK(selectFileResult) ? readBinary(apdu) : new byte[]{(byte) 0x69, (byte) 0x86}; // etat non conforme
-        } else if (ins == 0xD6){
-            return isOK(selectFileResult) ? updateBinary(apdu) : new byte[]{(byte) 0x69, (byte) 0x86}; // etat non conforme
+        } else if (ins == 0xB0) {
+            return isOK(selectFileResult) ? intArrayToByteArray(readBinary(apduUnsigned)) : intArrayToByteArray(new int[]{(int) 0x69, (int) 0x86}); // etat non conforme
+        } else if (ins == 0xD6) {
+            return isOK(selectFileResult) ? intArrayToByteArray(updateBinary(apduUnsigned)) : intArrayToByteArray(new int[]{(int) 0x69, (int) 0x86}); // etat non conforme
         } else {
-            return new byte[]{(byte) 0x6D, (byte) 0x00}; // unknown INS
+            return intArrayToByteArray(new int[]{(int) 0x6D, (int) 0x00}); // unknown INS
         }
     }
 
@@ -99,142 +103,154 @@ public class cCardService extends HostApduService {
         }
     }
 
-    public byte[] selectApplication(byte[] apdu) {
-        byte cla = apdu[0];
+    public int[] selectApplication(int[] apdu) {
+        int cla = apdu[0];
         // CLA check
         if (cla != 0x00) {
-            return new byte[]{(byte) 0x6E, (byte) 0x00}; // unknown CLA
+            return new int[]{(int) 0x6E, (int) 0x00}; // unknown CLA
         }
         // INS check
-        byte ins = apdu[1];
+        int ins = apdu[1];
         if (ins == 0xA4) { // SELECT
             // Getting P1 and P2
-            byte p1 = apdu[2];
-            byte p2 = apdu[3];
+            int p1 = apdu[2];
+            int p2 = apdu[3];
             if (p1 == 0x04) { // SELECT APPLICATION
                 if (p2 == 0x00) {
-                    byte lc = apdu[4];
+                    int lc = apdu[4];
                     if (lc == 0x07) {
-                        byte[] data = Arrays.copyOfRange(apdu, 5, 5 + lc); // 5 + Lc = 12
-                        byte[] validData = {(byte) 0xD2, (byte) 0x76, (byte) 0x00, (byte) 0x00, (byte) 0x85, (byte) 0x01, (byte) 0x01};
-                        if (data == validData) {
-                            byte le = apdu[13];
+                        int[] data = Arrays.copyOfRange(apdu, 5, 5 + lc); // 5 + Lc = 12
+                        int[] validData = {(int) 0xD2, (int) 0x76, (int) 0x00, (int) 0x00, (int) 0x85, (int) 0x01, (int) 0x01};
+                        if (Arrays.equals(data, validData)) {
+                            int le = apdu[12];
                             if (le == 0x00) {
-                                return new byte[]{(byte) 0x90, (byte) 0x00}; // OK
+                                return new int[]{(int) 0x90, (int) 0x00}; // OK
                             } else {
-                                return new byte[]{(byte) 0x6C, (byte) 0x00}; // incorrect Le
+                                return new int[]{(int) 0x6C, (int) 0x00}; // incorrect Le
                             }
                         } else {
-                            return new byte[]{(byte) 0x6A, (byte) 0x82}; // unknown AID/LID
+                            return new int[]{(int) 0x6A, (int) 0x82}; // unknown AID/LID
                         }
                     } else {
-                        return new byte[]{(byte) 0x67, (byte) 0x00}; // incorrect Lc
+                        return new int[]{(int) 0x67, (int) 0x00}; // incorrect Lc
                     }
                 } else {
-                    return new byte[]{(byte) 0x6A, (byte) 0x86}; // incorrect P1/P2 SELECT
+                    return new int[]{(int) 0x6A, (int) 0x86}; // incorrect P1/P2 SELECT
                 }
             } else {
-                return new byte[]{(byte) 0x6A, (byte) 0x86}; // incorrect P1/P2 SELECT
+                return new int[]{(int) 0x6A, (int) 0x86}; // incorrect P1/P2 SELECT
             }
         } else {
-            return new byte[]{(byte) 0x6D, (byte) 0x00}; // unknown INS
+            return new int[]{(int) 0x6D, (int) 0x00}; // unknown INS
         }
 
     }
 
-    public byte[] selectFile(byte[] apdu) {
-        byte cla = apdu[0];
+    public int[] selectFile(int[] apdu) {
+        int cla = apdu[0];
         // CLA check
         if (cla != 0x00) {
-            return new byte[]{(byte) 0x6E, (byte) 0x00}; // unknown CLA
+            return new int[]{(int) 0x6E, (int) 0x00}; // unknown CLA
         }
         // INS check
-        byte ins = apdu[1];
+        int ins = apdu[1];
         if (ins == 0xA4) { // SELECT
             // Getting P1 and P2
-            byte p1 = apdu[2];
-            byte p2 = apdu[3];
+            int p1 = apdu[2];
+            int p2 = apdu[3];
             if (p1 == 0x00 && p2 == 0x0C) {
-                byte lc = apdu[4];
+                int lc = apdu[4];
                 if (lc == 0x02) {
-                    byte[] data = Arrays.copyOfRange(apdu, 5, 5 + lc); // 5 + Lc = 7
-                    byte[] ccData = {(byte) 0xE1, (byte) 0x03};
-                    byte[] ndefData = {(byte) 0x81, (byte) 0x01};
-                    if (data == ccData) {
+                    int[] data = Arrays.copyOfRange(apdu, 5, 5 + lc); // 5 + Lc = 7
+                    int[] ccData = {(int) 0xE1, (int) 0x03};
+                    int[] ndefData = {(int) 0x81, (int) 0x01};
+                    if (Arrays.equals(data, ccData)) {
                         selectedFile = ccFile;
-                        return new byte[]{(byte) 0x90, (byte) 0x00}; // OK
-                    } else if (data == ndefData) {
+                        return new int[]{(int) 0x90, (int) 0x00}; // OK
+                    } else if (Arrays.equals(data, ndefData)) {
                         selectedFile = ndefFile;
-                        return new byte[]{(byte) 0x90, (byte) 0x00}; // OK
+                        return new int[]{(int) 0x90, (int) 0x00}; // OK
                     } else {
-                        return new byte[]{(byte) 0x6A, (byte) 0x82}; // unknown AID/LID
+                        return new int[]{(int) 0x6A, (int) 0x82}; // unknown AID/LID
                     }
                 } else {
-                    return new byte[]{(byte) 0x67, (byte) 0x00}; // incorrect Lc
+                    return new int[]{(int) 0x67, (int) 0x00}; // incorrect Lc
                 }
             } else {
-                return new byte[]{(byte) 0x6A, (byte) 0x86}; // incorrect P1/P2 SELECT
+                return new int[]{(int) 0x6A, (int) 0x86}; // incorrect P1/P2 SELECT
             }
         } else {
-            return new byte[]{(byte) 0x6D, (byte) 0x00}; // unknown INS
+            return new int[]{(int) 0x6D, (int) 0x00}; // unknown INS
         }
 
     }
 
-    public byte[] readBinary(byte[] apdu) {
-        byte cla = apdu[0];
+    public int[] readBinary(int[] apdu) {
+        int cla = apdu[0];
         // CLA check
         if (cla != 0x00) {
-            return new byte[]{(byte) 0x6E, (byte) 0x00}; // unknown CLA
+            return new int[]{(int) 0x6E, (int) 0x00}; // unknown CLA
         }
-        byte ins = apdu[1];
+        int ins = apdu[1];
         // INS check
         if (ins != 0xB0) {
-            return new byte[]{(byte) 0x6D, (byte) 0x00}; // unknown INS
+            return new int[]{(int) 0x6D, (int) 0x00}; // unknown INS
         }
-        byte[] offset = {apdu[2], apdu[3]};
-        byte le = apdu[4];
+        int[] offset = {apdu[2], apdu[3]};
+        int le = apdu[4];
         // TODO: 14/02/2019 check offset + le <= maxLe, sinon return 6C00
         try {
             // FIXME: 14/02/2019 what should we do with the file content ?
             System.out.println(getFileContent(offset[0] + offset[1], le));
-            return new byte[]{(byte) 0x90, (byte) 0x00}; // OK
+            return new int[]{(int) 0x90, (int) 0x00}; // OK
         } catch (IOException e) {
             e.printStackTrace();
-            return new byte[]{(byte) 0x42, (byte) 0x69}; // exception management
+            return new int[]{(int) 0x42, (int) 0x69}; // exception management
         }
     }
 
-    public byte[] updateBinary(byte[] apdu) {
-        byte cla = apdu[0];
+    public int[] updateBinary(int[] apdu) {
+        int cla = apdu[0];
         // CLA check
         if (cla != 0x00) {
-            return new byte[]{(byte) 0x6E, (byte) 0x00}; // unknown CLA
+            return new int[]{(int) 0x6E, (int) 0x00}; // unknown CLA
         }
-        byte ins = apdu[1];
+        int ins = apdu[1];
         // INS check
         if (ins != 0xD6) {
-            return new byte[]{(byte) 0x6D, (byte) 0x00}; // unknown INS
+            return new int[]{(int) 0x6D, (int) 0x00}; // unknown INS
         }
-        byte[] offset = {apdu[2], apdu[3]};
-        byte lc = apdu[4];
+        int[] offset = {apdu[2], apdu[3]};
+        int lc = apdu[4];
         // TODO: 14/02/2019 check offset + lc <= maxLc, sinon return 6A87
-        byte[] contentToWrite = Arrays.copyOfRange(apdu, 5, 5 + lc);
-        return writeToFile(contentToWrite);
+        int[] contentToWrite = Arrays.copyOfRange(apdu, 5, 5 + lc);
+        int[] resToPrint = new int[contentToWrite.length];
+        for (int i = 0; i < contentToWrite.length; i++) {
+            resToPrint[i] = (int) contentToWrite[i];
+        }
+        return writeToFile(resToPrint);
     }
 
-    private byte[] writeToFile(byte[] contentToWrite) {
+    private int[] writeToFile(int[] contentToWrite) {
         try {
-            new BufferedWriter(new FileWriter(selectedFile)).write(new String(contentToWrite, Charset.forName("UTF-8")));
-            return new byte[]{(byte) 0x90, (byte) 0x00}; // OK
+            new BufferedWriter(new FileWriter(selectedFile)).write(new String(intArrayToByteArray(contentToWrite), Charset.forName("UTF-8")));
+            return new int[]{(int) 0x90, (int) 0x00}; // OK
         } catch (IOException e) {
             e.printStackTrace();
-            return new byte[]{(byte) 0x42, (byte) 0x69}; // exception management
+            return new int[]{(int) 0x42, (int) 0x69}; // exception management
         }
     }
 
-    private boolean isOK(byte[] returnedCode) {
-        return returnedCode == new byte[]{(byte) 0x90, (byte) 0x00};
+    private boolean isOK(int[] returnedCode) {
+        return returnedCode == new int[]{(int) 0x90, (int) 0x00};
+    }
+
+    private byte[] intArrayToByteArray(int[] byteArray) {
+        byte[] res = new byte[byteArray.length];
+        for (int i = 0; i < byteArray.length; i++){
+            res[i] = (byte) (byteArray[i] & 0xFF);
+        }
+        return res;
     }
 
     /**
