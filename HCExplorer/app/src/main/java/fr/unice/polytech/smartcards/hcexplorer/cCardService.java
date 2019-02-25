@@ -1,5 +1,6 @@
 package fr.unice.polytech.smartcards.hcexplorer;
 
+import android.content.Context;
 import android.nfc.cardemulation.HostApduService;
 import android.os.Bundle;
 
@@ -7,6 +8,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -95,9 +97,13 @@ public class cCardService extends HostApduService {
     }
 
     private void createCCFile() {
+        int[] ccContent = new int[]{0x00, 0x0F, 0x20, 0x00, 0x3B, 0x00, 0x34, 0x04, 0x06, 0xE1, 0x04, 0x00, 0x32, 0x00, 0x00};
         ccFile = new File(getFilesDir(), CC_FILE_NAME);
+        FileOutputStream fos;
         try {
-            new BufferedWriter(new FileWriter(ccFile)).write(CC_FILE_CONTENT);
+            fos = openFileOutput(ccFile.getName(), Context.MODE_PRIVATE);
+            fos.write(CC_FILE_CONTENT.getBytes());
+            fos.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -124,7 +130,7 @@ public class cCardService extends HostApduService {
                         if (Arrays.equals(data, validData)) {
                             int le = apdu[12];
                             if (le == 0x00) {
-                                return new int[]{(int) 0x90, (int) 0x00}; // OK
+                                return new int[]{(int) 0x03, (int) 0x90, (int) 0x00}; // OK
                             } else {
                                 return new int[]{(int) 0x6C, (int) 0x00}; // incorrect Le
                             }
@@ -166,10 +172,10 @@ public class cCardService extends HostApduService {
                     int[] ndefData = {(int) 0x81, (int) 0x01};
                     if (Arrays.equals(data, ccData)) {
                         selectedFile = ccFile;
-                        return new int[]{(int) 0x90, (int) 0x00}; // OK
+                        return new int[]{(int) 0x03, (int) 0x90, (int) 0x00}; // OK
                     } else if (Arrays.equals(data, ndefData)) {
                         selectedFile = ndefFile;
-                        return new int[]{(int) 0x90, (int) 0x00}; // OK
+                        return new int[]{(int) 0x03, (int) 0x90, (int) 0x00}; // OK
                     } else {
                         return new int[]{(int) 0x6A, (int) 0x82}; // unknown AID/LID
                     }
@@ -201,8 +207,15 @@ public class cCardService extends HostApduService {
         // TODO: 14/02/2019 check offset + le <= maxLe, sinon return 6C00
         try {
             // FIXME: 14/02/2019 what should we do with the file content ?
-            System.out.println(getFileContent(offset[0] + offset[1], le));
-            return new int[]{(int) 0x90, (int) 0x00}; // OK
+            int[] ccLen = new int[]{0x00};
+            byte[] fileContent = getFileContent(offset[0] + offset[1], le);
+            int[] returnCode = new int[]{0x90, 0x00};
+            System.out.println(Arrays.toString(fileContent));
+            int[] resArray = new int[fileContent.length + 3];
+            System.arraycopy(ccLen, 0, resArray, 0, ccLen.length);
+            System.arraycopy(fileContent, 0, resArray, ccLen.length, fileContent.length);
+            System.arraycopy(returnCode, 0, resArray, ccLen.length + fileContent.length, returnCode.length);
+            return resArray;
         } catch (IOException e) {
             e.printStackTrace();
             return new int[]{(int) 0x42, (int) 0x69}; // exception management
@@ -234,7 +247,7 @@ public class cCardService extends HostApduService {
     private int[] writeToFile(int[] contentToWrite) {
         try {
             new BufferedWriter(new FileWriter(selectedFile)).write(new String(intArrayToByteArray(contentToWrite), Charset.forName("UTF-8")));
-            return new int[]{(int) 0x90, (int) 0x00}; // OK
+            return new int[]{(int) 0x03, (int) 0x90, (int) 0x00}; // OK
         } catch (IOException e) {
             e.printStackTrace();
             return new int[]{(int) 0x42, (int) 0x69}; // exception management
@@ -242,15 +255,25 @@ public class cCardService extends HostApduService {
     }
 
     private boolean isOK(int[] returnedCode) {
-        return returnedCode == new int[]{(int) 0x90, (int) 0x00};
+        return Arrays.equals(returnedCode, new int[]{(int) 0x03, (int) 0x90, (int) 0x00});
     }
 
     private byte[] intArrayToByteArray(int[] byteArray) {
         byte[] res = new byte[byteArray.length];
-        for (int i = 0; i < byteArray.length; i++){
+        for (int i = 0; i < byteArray.length; i++) {
             res[i] = (byte) (byteArray[i] & 0xFF);
         }
         return res;
+    }
+
+    private byte[] hexStringToByteArray(String s) {
+        int len = s.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+                    + Character.digit(s.charAt(i + 1), 16));
+        }
+        return data;
     }
 
     /**
@@ -258,9 +281,12 @@ public class cCardService extends HostApduService {
      *
      * @return
      */
-    private String getFileContent(int offset, int le) throws IOException {
+    private byte[] getFileContent(int offset, int le) throws IOException {
         // TODO: 14/02/2019 check this
-        return getFileAsString(selectedFile).substring(offset, offset + le); //.getBytes(Charset.forName("UTF-8"));
+        String content = getFileAsString(selectedFile).substring(offset, offset + le);
+        String[] array = content.replaceAll("..(?!$)", "$0 ").split(" ");
+        return hexStringToByteArray(content);
+
     }
 
     private String getFileAsString(File file) throws IOException {
