@@ -24,6 +24,7 @@ public class cCardService extends HostApduService {
     private static final String NDEF_FILE_NAME = "ndef_file.txt";
     private static final String CC_FILE_NAME = "cc_file.txt";
     private static final String CC_FILE_CONTENT = "12000F20003B00340406E104080000";
+    private static final String NDEF_FILE_CONTENT = "0022D1021D5370910111550170617261676F6E2D72666964EE636F6D5101045400504944";
 
     private File ndefFile = null;
     private File ccFile = null;
@@ -85,24 +86,37 @@ public class cCardService extends HostApduService {
     @Override
     public void onCreate() {
         createCCFile();
-        for (File file : getFilesDir().listFiles()) {
-            if (file.getName().equals(NDEF_FILE_NAME)) {
-                ndefFile = file;
-                break;
-            }
-        }
-        if (ndefFile == null) {
-            ndefFile = new File(getFilesDir(), NDEF_FILE_NAME);
-        }
+        createNDEFFile();
+//        for (File file : getFilesDir().listFiles()) {
+//            if (file.getName().equals(NDEF_FILE_NAME)) {
+//                ndefFile = file;
+//                break;
+//            }
+//        }
+//        if (ndefFile == null) {
+//            ndefFile = new File(getFilesDir(), NDEF_FILE_NAME);
+//        }
     }
 
     private void createCCFile() {
-        int[] ccContent = new int[]{0x00, 0x0F, 0x20, 0x00, 0x3B, 0x00, 0x34, 0x04, 0x06, 0xE1, 0x04, 0x00, 0x32, 0x00, 0x00};
+//        int[] ccContent = new int[]{0x00, 0x0F, 0x20, 0x00, 0x3B, 0x00, 0x34, 0x04, 0x06, 0xE1, 0x04, 0x00, 0x32, 0x00, 0x00};
         ccFile = new File(getFilesDir(), CC_FILE_NAME);
         FileOutputStream fos;
         try {
             fos = openFileOutput(ccFile.getName(), Context.MODE_PRIVATE);
             fos.write(CC_FILE_CONTENT.getBytes());
+            fos.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void createNDEFFile() {
+        ndefFile = new File(getFilesDir(), NDEF_FILE_NAME);
+        FileOutputStream fos;
+        try {
+            fos = openFileOutput(ndefFile.getName(), Context.MODE_PRIVATE);
+            fos.write(NDEF_FILE_CONTENT.getBytes());
             fos.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -169,15 +183,18 @@ public class cCardService extends HostApduService {
                 if (lc == 0x02) {
                     int[] data = Arrays.copyOfRange(apdu, 5, 5 + lc); // 5 + Lc = 7
                     int[] ccData = {(int) 0xE1, (int) 0x03};
-                    int[] ndefData = {(int) 0x81, (int) 0x01};
+//                    int[] ndefData = {(int) 0x81, (int) 0x01};
+                    System.out.println("data" + Arrays.toString(data));
                     if (Arrays.equals(data, ccData)) {
                         selectedFile = ccFile;
                         return new int[]{(int) 0x03, (int) 0x90, (int) 0x00}; // OK
-                    } else if (Arrays.equals(data, ndefData)) {
+//                    } else if (Arrays.equals(data, ndefData)) {
+//                        selectedFile = ndefFile;
+//                        return new int[]{(int) 0x03, (int) 0x90, (int) 0x00}; // OK
+                    } else {
                         selectedFile = ndefFile;
                         return new int[]{(int) 0x03, (int) 0x90, (int) 0x00}; // OK
-                    } else {
-                        return new int[]{(int) 0x6A, (int) 0x82}; // unknown AID/LID
+//                        return new int[]{(int) 0x6A, (int) 0x82}; // unknown AID/LID
                     }
                 } else {
                     return new int[]{(int) 0x67, (int) 0x00}; // incorrect Lc
@@ -206,11 +223,13 @@ public class cCardService extends HostApduService {
         int le = apdu[4];
         // TODO: 14/02/2019 check offset + le <= maxLe, sinon return 6C00
         try {
-            // FIXME: 14/02/2019 what should we do with the file content ?
-            int[] ccLen = new int[]{0x00};
-            byte[] fileContent = getFileContent(offset[0] + offset[1], le);
+            int[] maxLe = byteArrayToIntArray(getFileContent(3, 2));
+            if(offset[0] + offset[1] + le > maxLe[0] + maxLe[1]){
+                return new int[]{(int) 0x6C, (int) 0x00};
+            }
+            int[] fileContent = byteArrayToIntArray(getFileContent(offset[0] + offset[1], le));
+            int[] ccLen = new int[]{fileContent.length + 1};
             int[] returnCode = new int[]{0x90, 0x00};
-            System.out.println(Arrays.toString(fileContent));
             int[] resArray = new int[fileContent.length + 3];
             System.arraycopy(ccLen, 0, resArray, 0, ccLen.length);
             System.arraycopy(fileContent, 0, resArray, ccLen.length, fileContent.length);
@@ -258,10 +277,18 @@ public class cCardService extends HostApduService {
         return Arrays.equals(returnedCode, new int[]{(int) 0x03, (int) 0x90, (int) 0x00});
     }
 
-    private byte[] intArrayToByteArray(int[] byteArray) {
-        byte[] res = new byte[byteArray.length];
+    private byte[] intArrayToByteArray(int[] intArray) {
+        byte[] res = new byte[intArray.length];
+        for (int i = 0; i < intArray.length; i++) {
+            res[i] = (byte) (intArray[i] & 0xFF);
+        }
+        return res;
+    }
+
+    private int[] byteArrayToIntArray(byte[] byteArray) {
+        int[] res = new int[byteArray.length];
         for (int i = 0; i < byteArray.length; i++) {
-            res[i] = (byte) (byteArray[i] & 0xFF);
+            res[i] = byteArray[i];
         }
         return res;
     }
@@ -283,9 +310,9 @@ public class cCardService extends HostApduService {
      */
     private byte[] getFileContent(int offset, int le) throws IOException {
         // TODO: 14/02/2019 check this
-        String content = getFileAsString(selectedFile).substring(offset, offset + le);
+        String content = getFileAsString(selectedFile).substring(2 * offset, 2 * (offset + le));
         String[] array = content.replaceAll("..(?!$)", "$0 ").split(" ");
-        return hexStringToByteArray(content);
+        return (hexStringToByteArray(content));
 
     }
 
