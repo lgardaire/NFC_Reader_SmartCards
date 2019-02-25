@@ -214,6 +214,9 @@ namespace CSharpNETTestASKCSCDLL
                     if (typeLength != 0)
                     {
                         type = convertSublistByteToLong(content, startIndex + payLoadLengthLength + idLengthLength + 2, typeLength);
+                    } else
+                    {
+                        type = 0;
                     }
 
                     long idLength = 0;
@@ -244,7 +247,7 @@ namespace CSharpNETTestASKCSCDLL
                     }
                 } else
                 {
-                    return new Tuple<List<MessageContent>, bool>(new List<MessageContent>(), false);
+                    return new Tuple<List<MessageContent>, bool>(new List<MessageContent>(), binaryInfos.isLast());
                 } 
             } catch {
                 return new Tuple<List<MessageContent>, bool>(new List<MessageContent>(), false);
@@ -369,9 +372,11 @@ namespace CSharpNETTestASKCSCDLL
                             {
                                 List<byte[]> payload = new List<byte[]>();
                                 byte[] data1 = transformDataForText("La belle histoire", true, false);
-                                byte[] data = transformDataForURI("http://", "www.apple.com", false, true);
+                                byte[] data = transformDataForURI("http://", "www.apple.com", false, false);
+                                byte[] data2 = transformDataForBinary("POLYTECH", false, true);
                                 payload.Add(data1);
                                 payload.Add(data);
+                                payload.Add(data2);
 
                                 int size = 0;
                                 for(int i = 0; i < payload.Count; i++)
@@ -443,6 +448,18 @@ namespace CSharpNETTestASKCSCDLL
             byte[] payloadLengthBytes = BitConverter.GetBytes(payload.Count);
             result.Add(payloadLengthBytes[0]); //payload length
             result.Add(0x55); //type
+            result.AddRange(payload); //payload
+            return result.ToArray();
+        }
+
+        private byte[] transformDataForBinary(String content, bool firstRecord, bool lastRecord)
+        {
+            List<byte> result = new List<byte> { };
+            byte[] payload = Encoding.ASCII.GetBytes(content);
+            result.Add(createFirstByte(payload.Length, firstRecord, lastRecord));
+            result.Add(0x00); //type length
+            byte[] payloadLengthBytes = BitConverter.GetBytes(payload.Length);
+            result.Add(payloadLengthBytes[0]); //payload length
             result.AddRange(payload); //payload
             return result.ToArray();
         }

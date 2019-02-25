@@ -24,6 +24,9 @@ namespace CSharpNETTestASKCSCDLL
                 Tuple<String, String> tmp = parseTextPayload(payload);
                 this.payload = tmp.Item1;
                 this.language = tmp.Item2;
+            } else if (type == 0x00) //binary type
+            {
+                this.payload = Encoding.ASCII.GetString(payload.ToArray());
             }
             
             this.lastIndex = lastIndex;
