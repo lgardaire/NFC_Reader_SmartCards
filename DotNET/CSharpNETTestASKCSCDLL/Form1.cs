@@ -214,6 +214,9 @@ namespace CSharpNETTestASKCSCDLL
                     if (typeLength != 0)
                     {
                         type = convertSublistByteToLong(content, startIndex + payLoadLengthLength + idLengthLength + 2, typeLength);
+                    } else
+                    {
+                        type = 0;
                     }
 
                     long idLength = 0;
@@ -244,7 +247,7 @@ namespace CSharpNETTestASKCSCDLL
                     }
                 } else
                 {
-                    return new Tuple<List<MessageContent>, bool>(new List<MessageContent>(), false);
+                    return new Tuple<List<MessageContent>, bool>(new List<MessageContent>(), binaryInfos.isLast());
                 } 
             } catch {
                 return new Tuple<List<MessageContent>, bool>(new List<MessageContent>(), false);
@@ -367,13 +370,24 @@ namespace CSharpNETTestASKCSCDLL
                             Status = AskReaderLib.CSC.CSC_ISOCommand(byBuffIn, byBuffIn.Length, byBuffOut, ref iLenOut);
                             if ((Status == AskReaderLib.CSC.RCSC_Ok) && (iLenOut > 2) && (byBuffOut[iLenOut - 2] == 0x90) && (byBuffOut[iLenOut - 1] == 0x00))
                             {
-                                byte[] data = transformDataForText("La belle histoire");
-                                //byte[] data = transformDataForURI("http://", "www.apple.com");
+                                List<byte[]> payload = new List<byte[]>();
+                                byte[] data1 = transformDataForText("La belle histoire", true, false);
+                                byte[] data = transformDataForURI("http://", "www.apple.com", false, false);
+                                byte[] data2 = transformDataForBinary("POLYTECH", false, true);
+                                payload.Add(data1);
+                                payload.Add(data);
+                                payload.Add(data2);
+
+                                int size = 0;
+                                for(int i = 0; i < payload.Count; i++)
+                                {
+                                    size += payload[i].Length;
+                                }
 
                                 iLenOut = 300;
 
-                                Byte[] dataLengthBytes = BitConverter.GetBytes(data.Length);
-                                Byte[] payloadLengthBytes = BitConverter.GetBytes(data.Length+2);
+                                Byte[] dataLengthBytes = BitConverter.GetBytes(size);
+                                Byte[] payloadLengthBytes = BitConverter.GetBytes(size+2);
                                 // write Binary NDEF
                                 List<byte> byBuffInList = new List<byte> { };
                                 byBuffInList.Add(0x00);
@@ -383,7 +397,10 @@ namespace CSharpNETTestASKCSCDLL
                                 byBuffInList.Add(payloadLengthBytes[0]);
                                 byBuffInList.Add(payloadLengthBytes[1]);
                                 byBuffInList.Add(dataLengthBytes[0]);
-                                byBuffInList.AddRange(data);
+                                for(int i = 0; i < payload.Count; i++)
+                                {
+                                    byBuffInList.AddRange(payload[i]);
+                                }
                                 Status = AskReaderLib.CSC.CSC_ISOCommand(byBuffInList.ToArray(), byBuffInList.Count, byBuffOut, ref iLenOut);
                                 if ((Status == AskReaderLib.CSC.RCSC_Ok) && (iLenOut > 2))
                                 {
@@ -405,11 +422,11 @@ namespace CSharpNETTestASKCSCDLL
             AskReaderLib.CSC.Close();
         }
 
-        private byte[] transformDataForText(String content)
+        private byte[] transformDataForText(String content, bool firstRecord, bool lastRecord)
         {
             List<byte> result = new List<byte> { };
             List<byte> payload = createTextPayload(content, "fr");
-            result.Add(createFirstByte(payload.Count));
+            result.Add(createFirstByte(payload.Count, firstRecord, lastRecord));
             result.Add(0x01); //type length
             byte[] payloadLengthBytes = BitConverter.GetBytes(payload.Count);
             result.Add(payloadLengthBytes[0]); //payload length
@@ -418,7 +435,7 @@ namespace CSharpNETTestASKCSCDLL
             return result.ToArray();
         }
 
-        private byte[] transformDataForURI(String prefix, String content)
+        private byte[] transformDataForURI(String prefix, String content, bool firstRecord, bool lastRecord)
         {
             List<byte> result = new List<byte> { };
             List<byte> payload = createURIPayload(prefix, content);
@@ -426,7 +443,7 @@ namespace CSharpNETTestASKCSCDLL
             {
                 throw new PrefixURINotFoundException("Prefix URI " + prefix + " not found");
             }
-            result.Add(createFirstByte(payload.Count));
+            result.Add(createFirstByte(payload.Count, firstRecord, lastRecord));
             result.Add(0x01); //type length
             byte[] payloadLengthBytes = BitConverter.GetBytes(payload.Count);
             result.Add(payloadLengthBytes[0]); //payload length
@@ -435,9 +452,37 @@ namespace CSharpNETTestASKCSCDLL
             return result.ToArray();
         }
 
-        private byte createFirstByte(int payloadLength)
+        private byte[] transformDataForBinary(String content, bool firstRecord, bool lastRecord)
         {
-            String firstByte = "110";
+            List<byte> result = new List<byte> { };
+            byte[] payload = Encoding.ASCII.GetBytes(content);
+            result.Add(createFirstByte(payload.Length, firstRecord, lastRecord));
+            result.Add(0x00); //type length
+            byte[] payloadLengthBytes = BitConverter.GetBytes(payload.Length);
+            result.Add(payloadLengthBytes[0]); //payload length
+            result.AddRange(payload); //payload
+            return result.ToArray();
+        }
+
+        private byte createFirstByte(int payloadLength, bool firstRecord, bool lastRecord)
+        {
+            String firstByte = "";
+            if (firstRecord)
+            {
+                firstByte += "1";
+            } else
+            {
+                firstByte += "0";
+            }
+            if (lastRecord)
+            {
+                firstByte += "1";
+            }
+            else
+            {
+                firstByte += "0";
+            }
+            firstByte += "0";
             if (payloadLength <= 255)
             {
                 firstByte += "1";
