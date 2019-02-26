@@ -407,7 +407,6 @@ namespace CSharpNETTestASKCSCDLL
                                 payload.AddRange(transformDataForBinary("PLS", false, false));
                                 payload.AddRange(transformDataForBinary("POLYTECH", false, false));
                                 payload.AddRange(transformDataForBinary("POLYTECH-SIAZERTYUIOPQSDFGHJKLMWXCVBNAZERTYUIOPQSDFGHJKLMWXCVBN", false, false));
-                                payload.AddRange(transformDataForBinary("POLYTECH-SIZERTYUIOPQSDFGHJKLMWXCVBNAZERTYUIOPQSDFGHJKLMWXCVBN", false, false));
                                 payload.AddRange(transformDataForBinary("POLYTECH-SIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZERTYUIOPQSDFGHJKLMWXCVBNAZERTYUIOPQSDFGHJKLMWXCVBN", false, true));
 
                                 iLenOut = 300;
