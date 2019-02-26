@@ -26,7 +26,7 @@ namespace CSharpNETTestASKCSCDLL
                 this.language = tmp.Item2;
             } else if (type == 0x00) //binary type
             {
-                this.payload = Encoding.ASCII.GetString(payload.ToArray());
+                this.payload = System.Text.Encoding.UTF8.GetString(payload.ToArray());
             }
             
             this.lastIndex = lastIndex;

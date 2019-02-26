@@ -137,19 +137,34 @@ namespace CSharpNETTestASKCSCDLL
                                         for(int i = 0; i < iterations; i++)
                                         {
                                             int size = maxLe;
-                                            if(i == iterations - 1 && iterations > 1)
+                                            Byte[] offset;
+                                            if (i == iterations - 1 && iterations > 1)
                                             {
                                                 size = maxSizeToRead - (maxLe * i) + 1;
                                             }
-                                            Byte[] offset = BitConverter.GetBytes(i * maxLe);
+                                            if(i == 0)
+                                            {
+                                                offset = BitConverter.GetBytes(0);
+                                            } else
+                                            {
+                                                offset = BitConverter.GetBytes(i * maxLe -1);
+                                            }
                                             byBuffIn = new byte[] { 0x00, 0xB0, offset[1], offset[0], maxLe2 };
                                             Status = AskReaderLib.CSC.CSC_ISOCommand(byBuffIn, byBuffIn.Length, byBuffOut, ref iLenOut);
                                             if ((Status == AskReaderLib.CSC.RCSC_Ok) && (iLenOut > 2) && (byBuffOut[iLenOut - 2] == 0x90) && (byBuffOut[iLenOut - 1] == 0x00))
                                             {
-                                                byte[] array = new byte[size];
-                                                for(int j = 0; j < size; j++)
+                                                byte[] array;
+                                                if (i == 0)
                                                 {
-                                                    array[j] = byBuffOut[j];
+                                                    array = new byte[size];
+                                                    Array.Copy(byBuffOut, array, size);
+                                                } else
+                                                {
+                                                    array = new byte[size];
+                                                    for (int j = 1; j <= size; j++)
+                                                    {
+                                                        array[j-1] = byBuffOut[j];
+                                                    }
                                                 }
                                                 result.AddRange(array);
                                             }
@@ -242,7 +257,7 @@ namespace CSharpNETTestASKCSCDLL
                     {
                         payloadStartIndex = startIndex + payLoadLengthLength + 2;
                     }
-                    List<Byte> payload = getSubListFrom(content.ToArray(), payloadStartIndex, payloadLength);
+                    List<Byte> payload = getSubListFrom(content.ToArray(), payloadStartIndex, Math.Min(payloadLength, content.Count-payloadStartIndex));
 
                     if (type == 0x5370) //is SmartPoster
                     {
@@ -386,41 +401,36 @@ namespace CSharpNETTestASKCSCDLL
                             Status = AskReaderLib.CSC.CSC_ISOCommand(byBuffIn, byBuffIn.Length, byBuffOut, ref iLenOut);
                             if ((Status == AskReaderLib.CSC.RCSC_Ok) && (iLenOut > 2) && (byBuffOut[iLenOut - 2] == 0x90) && (byBuffOut[iLenOut - 1] == 0x00))
                             {
-                                List<byte[]> payload = new List<byte[]>();
-                                byte[] data1 = transformDataForText("La belle histoire", true, false);
-                                byte[] data = transformDataForURI("http://", "www.apple.com", false, false);
-                                byte[] data2 = transformDataForBinary("POLYTECH", false, true);
-                                payload.Add(data1);
-                                payload.Add(data);
-                                payload.Add(data2);
-
-                                int size = 0;
-                                for(int i = 0; i < payload.Count; i++)
-                                {
-                                    size += payload[i].Length;
-                                }
+                                List<byte> payload = new List<byte>();
+                                payload.AddRange(transformDataForText("La belle histoire", true, false));
+                                payload.AddRange(transformDataForURI("http://", "www.apple.com", false, false));
+                                payload.AddRange(transformDataForBinary("PLS", false, false));
+                                payload.AddRange(transformDataForBinary("POLYTECH", false, false));
+                                payload.AddRange(transformDataForBinary("POLYTECH-SIAZERTYUIOPQSDFGHJKLMWXCVBNAZERTYUIOPQSDFGHJKLMWXCVBN", false, false));
+                                payload.AddRange(transformDataForBinary("POLYTECH-SIZERTYUIOPQSDFGHJKLMWXCVBNAZERTYUIOPQSDFGHJKLMWXCVBN", false, false));
+                                payload.AddRange(transformDataForBinary("POLYTECH-SIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZERTYUIOPQSDFGHJKLMWXCVBNAZERTYUIOPQSDFGHJKLMWXCVBN", false, true));
 
                                 iLenOut = 300;
 
-                                Byte[] dataLengthBytes = BitConverter.GetBytes(size);
-                                Byte[] payloadLengthBytes = BitConverter.GetBytes(size+2);
                                 // write Binary NDEF
-                                List<byte> byBuffInList = new List<byte> { };
-                                byBuffInList.Add(0x00);
-                                byBuffInList.Add(0xD6);
-                                byBuffInList.Add(0x00);
-                                byBuffInList.Add(0x00);
-                                byBuffInList.Add(payloadLengthBytes[0]);
-                                byBuffInList.Add(payloadLengthBytes[1]);
-                                byBuffInList.Add(dataLengthBytes[0]);
-                                for(int i = 0; i < payload.Count; i++)
-                                {
-                                    byBuffInList.AddRange(payload[i]);
-                                }
+                                int Lc = Convert.ToInt32(maxLc1.ToString() + maxLc2.ToString());
+                                int iterations = (payload.Count-2) / Lc + 1;
+                                Byte[] dataLengthBytes = BitConverter.GetBytes(payload.Count);
+                                Byte[] payloadLengthBytes = BitConverter.GetBytes(payload.Count + 2);
+
+                                payload.Insert(0, payloadLengthBytes[0]);
+                                payload.Insert(1, dataLengthBytes[1]);
+                                payload.Insert(2, dataLengthBytes[0]);
+                                List<byte> byBuffInList = new List<byte> { 0x00, 0xD6, 0x00, 0x00 };
+                                byBuffInList.AddRange(payload);
                                 Status = AskReaderLib.CSC.CSC_ISOCommand(byBuffInList.ToArray(), byBuffInList.Count, byBuffOut, ref iLenOut);
                                 if ((Status == AskReaderLib.CSC.RCSC_Ok) && (iLenOut > 2))
                                 {
                                     Console.Write("End of writing");
+                                }
+                                else
+                                {
+                                    MessageBox.Show("Can't write on card");
                                 }
                             }
                         }
@@ -471,7 +481,7 @@ namespace CSharpNETTestASKCSCDLL
         private byte[] transformDataForBinary(String content, bool firstRecord, bool lastRecord)
         {
             List<byte> result = new List<byte> { };
-            byte[] payload = Encoding.ASCII.GetBytes(content);
+            byte[] payload = System.Text.Encoding.UTF8.GetBytes(content);
             result.Add(createFirstByte(payload.Length, firstRecord, lastRecord));
             result.Add(0x00); //type length
             byte[] payloadLengthBytes = BitConverter.GetBytes(payload.Length);
