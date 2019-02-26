@@ -117,13 +117,13 @@ namespace CSharpNETTestASKCSCDLL
                                 if ((Status == AskReaderLib.CSC.RCSC_Ok) && (iLenOut > 2))
                                 {
 
-                                    int maxSizeToRead = Convert.ToInt32(byBuffOut[1].ToString() + byBuffOut[2].ToString());
+                                    int maxSizeToRead = Convert.ToInt32(byBuffOut[1].ToString() + byBuffOut[2].ToString()) + 2;
 
                                     List<Byte> result = new List<Byte>();
                                     if (maxSizeToRead < maxLe)
                                     {
                                         iLenOut = maxLe;
-                                        Byte[] tmp = BitConverter.GetBytes(maxSizeToRead+2);
+                                        Byte[] tmp = BitConverter.GetBytes(maxSizeToRead);
                                         byBuffIn = new byte[] { 0x00, 0xB0, 0x00, 0x00, tmp[0] };
                                         Status = AskReaderLib.CSC.CSC_ISOCommand(byBuffIn, byBuffIn.Length, byBuffOut, ref iLenOut);
                                         if ((Status == AskReaderLib.CSC.RCSC_Ok) && (iLenOut > 2) && (byBuffOut[iLenOut - 2] == 0x90) && (byBuffOut[iLenOut - 1] == 0x00))
@@ -136,13 +136,22 @@ namespace CSharpNETTestASKCSCDLL
                                         int iterations = (maxSizeToRead / maxLe) + 1;
                                         for(int i = 0; i < iterations; i++)
                                         {
-                                            Byte[] offset = BitConverter.GetBytes(i * maxLe + 3);
-                                            iLenOut = maxLe + 3;
-                                            byBuffIn = new byte[] { 0x00, 0xB0, offset[0], offset[1], maxLe2 };
+                                            int size = maxLe;
+                                            if(i == iterations - 1 && iterations > 1)
+                                            {
+                                                size = maxSizeToRead - (maxLe * i) + 1;
+                                            }
+                                            Byte[] offset = BitConverter.GetBytes(i * maxLe);
+                                            byBuffIn = new byte[] { 0x00, 0xB0, offset[1], offset[0], maxLe2 };
                                             Status = AskReaderLib.CSC.CSC_ISOCommand(byBuffIn, byBuffIn.Length, byBuffOut, ref iLenOut);
                                             if ((Status == AskReaderLib.CSC.RCSC_Ok) && (iLenOut > 2) && (byBuffOut[iLenOut - 2] == 0x90) && (byBuffOut[iLenOut - 1] == 0x00))
                                             {
-                                                result.AddRange(byBuffOut);
+                                                byte[] array = new byte[size];
+                                                for(int j = 0; j < size; j++)
+                                                {
+                                                    array[j] = byBuffOut[j];
+                                                }
+                                                result.AddRange(array);
                                             }
                                         } 
                                     }
@@ -225,7 +234,14 @@ namespace CSharpNETTestASKCSCDLL
                         idLength = convertSublistByteToLong(content, startIndex + payLoadLengthLength + 1, idLengthLength);
                     }
 
-                    long payloadStartIndex = startIndex + payLoadLengthLength + idLengthLength + typeLength + idLength + 2;
+                    long payloadStartIndex;
+                    if (type != 0)
+                    {
+                        payloadStartIndex = startIndex + payLoadLengthLength + idLengthLength + typeLength + idLength + 2;
+                    } else
+                    {
+                        payloadStartIndex = startIndex + payLoadLengthLength + 2;
+                    }
                     List<Byte> payload = getSubListFrom(content.ToArray(), payloadStartIndex, payloadLength);
 
                     if (type == 0x5370) //is SmartPoster
