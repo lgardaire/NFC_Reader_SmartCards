@@ -42,7 +42,7 @@
             this.Button1.Name = "Button1";
             this.Button1.Size = new System.Drawing.Size(89, 44);
             this.Button1.TabIndex = 1;
-            this.Button1.Text = "Detect Card";
+            this.Button1.Text = "Read on Card";
             this.Button1.UseVisualStyleBackColor = true;
             this.Button1.Click += new System.EventHandler(this.Button1_Click);
             // 
