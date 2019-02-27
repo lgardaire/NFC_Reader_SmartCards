@@ -53,11 +53,11 @@ public class APDUProcessor {
         this.ndefFile = ndefFile;
     }
 
-    public int[] processCommandApdu(int[] apdu){
+    public int[] processCommandApdu(int[] apdu) {
         int cla = apdu[0];
         // CLA check
         if (cla != 0x00) {
-            return new int[]{(int) 0x6E, (int) 0x00}; // unknown CLA
+            return new int[]{0x6E, 0x00}; // unknown CLA
         }
         int ins = apdu[1];
         // INS check
@@ -74,17 +74,17 @@ public class APDUProcessor {
                     selectFileResult = selectFile(apdu);
                     return selectFileResult;
                 } else {
-                    return new int[]{(int) 0x69, (int) 0x86}; // etat non conforme
+                    return new int[]{0x69, 0x86}; // etat non conforme
                 }
             } else {
-                return new int[]{(int) 0x6A, (int) 0x86}; // incorrect P1/P2 SELECT
+                return new int[]{0x6A, 0x86}; // incorrect P1/P2 SELECT
             }
         } else if (ins == 0xB0) {
-            return isOK(selectFileResult) ? readBinary(apdu) : new int[]{(int) 0x69, (int) 0x86}; // etat non conforme
+            return isOK(selectFileResult) ? readBinary(apdu) : new int[]{0x69, 0x86}; // etat non conforme
         } else if (ins == 0xD6) {
-            return isOK(selectFileResult) ? updateBinary(apdu) : new int[]{(int) 0x69, (int) 0x86}; // etat non conforme
+            return isOK(selectFileResult) ? updateBinary(apdu) : new int[]{0x69, 0x86}; // etat non conforme
         } else {
-            return new int[]{(int) 0x6D, (int) 0x00}; // unknown INS
+            return new int[]{0x6D, 0x00}; // unknown INS
         }
 
     }
@@ -106,7 +106,7 @@ public class APDUProcessor {
         int cla = apdu[0];
         // CLA check
         if (cla != 0x00) {
-            return new int[]{(int) 0x6E, (int) 0x00}; // unknown CLA
+            return new int[]{0x6E, 0x00}; // unknown CLA
         }
         // INS check
         int ins = apdu[1];
@@ -119,28 +119,28 @@ public class APDUProcessor {
                     int lc = apdu[4];
                     if (lc == 0x07) {
                         int[] data = Arrays.copyOfRange(apdu, 5, 5 + lc); // 5 + Lc = 12
-                        int[] validData = {(int) 0xD2, (int) 0x76, (int) 0x00, (int) 0x00, (int) 0x85, (int) 0x01, (int) 0x01};
+                        int[] validData = {0xD2, 0x76, 0x00, 0x00, 0x85, 0x01, 0x01};
                         if (Arrays.equals(data, validData)) {
                             int le = apdu[12];
                             if (le == 0x00) {
-                                return new int[]{(int) 0x03, (int) 0x90, (int) 0x00}; // OK
+                                return new int[]{0x03, 0x90, 0x00}; // OK
                             } else {
-                                return new int[]{(int) 0x6C, (int) 0x00}; // incorrect Le
+                                return new int[]{0x6C, 0x00}; // incorrect Le
                             }
                         } else {
-                            return new int[]{(int) 0x6A, (int) 0x82}; // unknown AID/LID
+                            return new int[]{0x6A, 0x82}; // unknown AID/LID
                         }
                     } else {
-                        return new int[]{(int) 0x67, (int) 0x00}; // incorrect Lc
+                        return new int[]{0x67, 0x00}; // incorrect Lc
                     }
                 } else {
-                    return new int[]{(int) 0x6A, (int) 0x86}; // incorrect P1/P2 SELECT
+                    return new int[]{0x6A, 0x86}; // incorrect P1/P2 SELECT
                 }
             } else {
-                return new int[]{(int) 0x6A, (int) 0x86}; // incorrect P1/P2 SELECT
+                return new int[]{0x6A, 0x86}; // incorrect P1/P2 SELECT
             }
         } else {
-            return new int[]{(int) 0x6D, (int) 0x00}; // unknown INS
+            return new int[]{0x6D, 0x00}; // unknown INS
         }
     }
 
@@ -148,7 +148,7 @@ public class APDUProcessor {
         int cla = apdu[0];
         // CLA check
         if (cla != 0x00) {
-            return new int[]{(int) 0x6E, (int) 0x00}; // unknown CLA
+            return new int[]{0x6E, 0x00}; // unknown CLA
         }
         // INS check
         int ins = apdu[1];
@@ -160,27 +160,27 @@ public class APDUProcessor {
                 int lc = apdu[4];
                 if (lc == 0x02) {
                     int[] data = Arrays.copyOfRange(apdu, 5, 5 + lc); // 5 + Lc = 7
-                    int[] ccData = {(int) 0xE1, (int) 0x03};
-//                    int[] ndefData = {(int) 0x81, (int) 0x01};
+                    int[] ccData = {0xE1, 0x03};
+//                    int[] ndefData = {0x81, 0x01};
                     if (Arrays.equals(data, ccData)) {
                         selectedFile = ccFile;
-                        return new int[]{(int) 0x03, (int) 0x90, (int) 0x00}; // OK
+                        return new int[]{0x03, 0x90, 0x00}; // OK
 //                    } else if (Arrays.equals(data, ndefData)) {
 //                        selectedFile = ndefFile;
-//                        return new int[]{(int) 0x03, (int) 0x90, (int) 0x00}; // OK
+//                        return new int[]{0x03, 0x90, 0x00}; // OK
                     } else {
                         selectedFile = ndefFile;
-                        return new int[]{(int) 0x03, (int) 0x90, (int) 0x00}; // OK
-//                        return new int[]{(int) 0x6A, (int) 0x82}; // unknown AID/LID
+                        return new int[]{0x03, 0x90, 0x00}; // OK
+//                        return new int[]{0x6A, 0x82}; // unknown AID/LID
                     }
                 } else {
-                    return new int[]{(int) 0x67, (int) 0x00}; // incorrect Lc
+                    return new int[]{0x67, 0x00}; // incorrect Lc
                 }
             } else {
-                return new int[]{(int) 0x6A, (int) 0x86}; // incorrect P1/P2 SELECT
+                return new int[]{0x6A, 0x86}; // incorrect P1/P2 SELECT
             }
         } else {
-            return new int[]{(int) 0x6D, (int) 0x00}; // unknown INS
+            return new int[]{0x6D, 0x00}; // unknown INS
         }
 
     }
@@ -189,12 +189,12 @@ public class APDUProcessor {
         int cla = apdu[0];
         // CLA check
         if (cla != 0x00) {
-            return new int[]{(int) 0x6E, (int) 0x00}; // unknown CLA
+            return new int[]{0x6E, 0x00}; // unknown CLA
         }
         int ins = apdu[1];
         // INS check
         if (ins != 0xB0) {
-            return new int[]{(int) 0x6D, (int) 0x00}; // unknown INS
+            return new int[]{0x6D, 0x00}; // unknown INS
         }
         int[] offset = {apdu[2], apdu[3]};
         int le = apdu[4];
@@ -202,7 +202,7 @@ public class APDUProcessor {
         try {
             int[] maxLe = Utils.byteArrayToIntArray(getFileContent(3, 2));
             if (offset[0] + offset[1] + le > maxLe[0] + maxLe[1]) {
-                return new int[]{(int) 0x6C, (int) 0x00};
+                return new int[]{0x6C, 0x00};
             }
             int[] fileContent = Utils.byteArrayToIntArray(getFileContent(offset[0] + offset[1], le));
             int[] ccLen = new int[]{fileContent.length + 1};
@@ -214,7 +214,7 @@ public class APDUProcessor {
             return resArray;
         } catch (IOException e) {
             e.printStackTrace();
-            return new int[]{(int) 0x42, (int) 0x69}; // exception management
+            return new int[]{0x42, 0x69}; // exception management
         }
     }
 
@@ -222,12 +222,12 @@ public class APDUProcessor {
         int cla = apdu[0];
         // CLA check
         if (cla != 0x00) {
-            return new int[]{(int) 0x6E, (int) 0x00}; // unknown CLA
+            return new int[]{0x6E, 0x00}; // unknown CLA
         }
         int ins = apdu[1];
         // INS check
         if (ins != 0xD6) {
-            return new int[]{(int) 0x6D, (int) 0x00}; // unknown INS
+            return new int[]{0x6D, 0x00}; // unknown INS
         }
         int[] offset = {apdu[2], apdu[3]};
         int lc = apdu[4];
@@ -235,7 +235,7 @@ public class APDUProcessor {
         int[] contentToWrite = Arrays.copyOfRange(apdu, 5, 5 + lc);
         int[] resToPrint = new int[contentToWrite.length];
         for (int i = 0; i < contentToWrite.length; i++) {
-            resToPrint[i] = (int) contentToWrite[i];
+            resToPrint[i] = contentToWrite[i];
         }
         return writeToFile(resToPrint);
     }
@@ -243,15 +243,15 @@ public class APDUProcessor {
     private int[] writeToFile(int[] contentToWrite) {
         try {
             new BufferedWriter(new FileWriter(selectedFile)).write(new String(intArrayToByteArray(contentToWrite), Charset.forName("UTF-8")));
-            return new int[]{(int) 0x03, (int) 0x90, (int) 0x00}; // OK
+            return new int[]{0x03, 0x90, 0x00}; // OK
         } catch (IOException e) {
             e.printStackTrace();
-            return new int[]{(int) 0x42, (int) 0x69}; // exception management
+            return new int[]{0x42, 0x69}; // exception management
         }
     }
 
     private boolean isOK(int[] returnedCode) {
-        return Arrays.equals(returnedCode, new int[]{(int) 0x03, (int) 0x90, (int) 0x00});
+        return Arrays.equals(returnedCode, new int[]{0x03, 0x90, 0x00});
     }
 
     /**
