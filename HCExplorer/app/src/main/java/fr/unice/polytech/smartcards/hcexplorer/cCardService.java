@@ -15,6 +15,9 @@ import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 
+import static fr.unice.polytech.smartcards.hcexplorer.ApplicationSteps.selectApplication;
+import static fr.unice.polytech.smartcards.hcexplorer.Utils.intArrayToByteArray;
+
 /**
  * Created by user on 07/02/2019.
  */
@@ -85,86 +88,25 @@ public class cCardService extends HostApduService {
 
     @Override
     public void onCreate() {
-        createCCFile();
-        createNDEFFile();
-//        for (File file : getFilesDir().listFiles()) {
-//            if (file.getName().equals(NDEF_FILE_NAME)) {
-//                ndefFile = file;
-//                break;
-//            }
-//        }
-//        if (ndefFile == null) {
-//            ndefFile = new File(getFilesDir(), NDEF_FILE_NAME);
-//        }
-    }
-
-    private void createCCFile() {
 //        int[] ccContent = new int[]{0x00, 0x0F, 0x20, 0x00, 0x3B, 0x00, 0x34, 0x04, 0x06, 0xE1, 0x04, 0x00, 0x32, 0x00, 0x00};
-        ccFile = new File(getFilesDir(), CC_FILE_NAME);
+        ccFile = createFile(CC_FILE_NAME, CC_FILE_CONTENT);
+        ndefFile = createFile(NDEF_FILE_NAME, NDEF_FILE_CONTENT);
+    }
+
+    private File createFile(String filename, String fileContent) {
+        File file = new File(getFilesDir(), filename);
         FileOutputStream fos;
         try {
-            fos = openFileOutput(ccFile.getName(), Context.MODE_PRIVATE);
-            fos.write(CC_FILE_CONTENT.getBytes());
+            fos = openFileOutput(file.getName(), Context.MODE_PRIVATE);
+            fos.write(fileContent.getBytes());
             fos.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return file;
     }
 
-    private void createNDEFFile() {
-        ndefFile = new File(getFilesDir(), NDEF_FILE_NAME);
-        FileOutputStream fos;
-        try {
-            fos = openFileOutput(ndefFile.getName(), Context.MODE_PRIVATE);
-            fos.write(NDEF_FILE_CONTENT.getBytes());
-            fos.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
-    public int[] selectApplication(int[] apdu) {
-        int cla = apdu[0];
-        // CLA check
-        if (cla != 0x00) {
-            return new int[]{(int) 0x6E, (int) 0x00}; // unknown CLA
-        }
-        // INS check
-        int ins = apdu[1];
-        if (ins == 0xA4) { // SELECT
-            // Getting P1 and P2
-            int p1 = apdu[2];
-            int p2 = apdu[3];
-            if (p1 == 0x04) { // SELECT APPLICATION
-                if (p2 == 0x00) {
-                    int lc = apdu[4];
-                    if (lc == 0x07) {
-                        int[] data = Arrays.copyOfRange(apdu, 5, 5 + lc); // 5 + Lc = 12
-                        int[] validData = {(int) 0xD2, (int) 0x76, (int) 0x00, (int) 0x00, (int) 0x85, (int) 0x01, (int) 0x01};
-                        if (Arrays.equals(data, validData)) {
-                            int le = apdu[12];
-                            if (le == 0x00) {
-                                return new int[]{(int) 0x03, (int) 0x90, (int) 0x00}; // OK
-                            } else {
-                                return new int[]{(int) 0x6C, (int) 0x00}; // incorrect Le
-                            }
-                        } else {
-                            return new int[]{(int) 0x6A, (int) 0x82}; // unknown AID/LID
-                        }
-                    } else {
-                        return new int[]{(int) 0x67, (int) 0x00}; // incorrect Lc
-                    }
-                } else {
-                    return new int[]{(int) 0x6A, (int) 0x86}; // incorrect P1/P2 SELECT
-                }
-            } else {
-                return new int[]{(int) 0x6A, (int) 0x86}; // incorrect P1/P2 SELECT
-            }
-        } else {
-            return new int[]{(int) 0x6D, (int) 0x00}; // unknown INS
-        }
-
-    }
 
     public int[] selectFile(int[] apdu) {
         int cla = apdu[0];
@@ -223,11 +165,11 @@ public class cCardService extends HostApduService {
         int le = apdu[4];
         // TODO: 14/02/2019 check offset + le <= maxLe, sinon return 6C00
         try {
-            int[] maxLe = byteArrayToIntArray(getFileContent(3, 2));
-            if(offset[0] + offset[1] + le > maxLe[0] + maxLe[1]){
+            int[] maxLe = Utils.byteArrayToIntArray(getFileContent(3, 2));
+            if (offset[0] + offset[1] + le > maxLe[0] + maxLe[1]) {
                 return new int[]{(int) 0x6C, (int) 0x00};
             }
-            int[] fileContent = byteArrayToIntArray(getFileContent(offset[0] + offset[1], le));
+            int[] fileContent = Utils.byteArrayToIntArray(getFileContent(offset[0] + offset[1], le));
             int[] ccLen = new int[]{fileContent.length + 1};
             int[] returnCode = new int[]{0x90, 0x00};
             int[] resArray = new int[fileContent.length + 3];
@@ -277,31 +219,6 @@ public class cCardService extends HostApduService {
         return Arrays.equals(returnedCode, new int[]{(int) 0x03, (int) 0x90, (int) 0x00});
     }
 
-    private byte[] intArrayToByteArray(int[] intArray) {
-        byte[] res = new byte[intArray.length];
-        for (int i = 0; i < intArray.length; i++) {
-            res[i] = (byte) (intArray[i] & 0xFF);
-        }
-        return res;
-    }
-
-    private int[] byteArrayToIntArray(byte[] byteArray) {
-        int[] res = new int[byteArray.length];
-        for (int i = 0; i < byteArray.length; i++) {
-            res[i] = byteArray[i];
-        }
-        return res;
-    }
-
-    private byte[] hexStringToByteArray(String s) {
-        int len = s.length();
-        byte[] data = new byte[len / 2];
-        for (int i = 0; i < len; i += 2) {
-            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
-                    + Character.digit(s.charAt(i + 1), 16));
-        }
-        return data;
-    }
 
     /**
      * Returns the content from the CC or NDEF file.
@@ -312,7 +229,7 @@ public class cCardService extends HostApduService {
         // TODO: 14/02/2019 check this
         String content = getFileAsString(selectedFile).substring(2 * offset, 2 * (offset + le));
         String[] array = content.replaceAll("..(?!$)", "$0 ").split(" ");
-        return (hexStringToByteArray(content));
+        return (Utils.hexStringToByteArray(content));
 
     }
 
