@@ -14,8 +14,10 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 
 import static fr.unice.polytech.smartcards.hcexplorer.Utils.byteArrayToIntArray;
+import static fr.unice.polytech.smartcards.hcexplorer.Utils.hexStringToByteArray;
 import static fr.unice.polytech.smartcards.hcexplorer.Utils.intArrayToByteArray;
 import static fr.unice.polytech.smartcards.hcexplorer.Utils.intToByteArray;
+import static fr.unice.polytech.smartcards.hcexplorer.Utils.twoBytesToInt;
 
 /**
  * Created by user on 27/02/2019.
@@ -92,12 +94,10 @@ public class APDUProcessor {
     }
 
     private File createFile(String filename, String fileContent) {
+//        String[] array = fileContent.replaceAll("..(?!$)", "$0 ").split(" ");
         File file = new File(context.getFilesDir(), filename);
-        FileOutputStream fos;
-        try {
-            fos = context.openFileOutput(file.getName(), Context.MODE_PRIVATE);
-            fos.write(fileContent.getBytes());
-            fos.close();
+        try (FileOutputStream fos = context.openFileOutput(file.getName(), Context.MODE_PRIVATE)) {
+            fos.write(hexStringToByteArray(fileContent));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -163,17 +163,12 @@ public class APDUProcessor {
                 if (lc == 0x02) {
                     int[] data = Arrays.copyOfRange(apdu, 5, 5 + lc); // 5 + Lc = 7
                     int[] ccData = {0xE1, 0x03};
-//                    int[] ndefData = {0x81, 0x01};
                     if (Arrays.equals(data, ccData)) {
                         selectedFile = ccFile;
                         return new int[]{0x03, 0x90, 0x00}; // OK
-//                    } else if (Arrays.equals(data, ndefData)) {
-//                        selectedFile = ndefFile;
-//                        return new int[]{0x03, 0x90, 0x00}; // OK
                     } else {
                         selectedFile = ndefFile;
                         return new int[]{0x03, 0x90, 0x00}; // OK
-//                        return new int[]{0x6A, 0x82}; // unknown AID/LID
                     }
                 } else {
                     return new int[]{0x67, 0x00}; // incorrect Lc
@@ -203,7 +198,7 @@ public class APDUProcessor {
         // TODO: 14/02/2019 check offset + le <= maxLe, sinon return 6C00
         try {
             int[] maxLe = Utils.byteArrayToIntArray(getFileSubContent(3, 2));
-            if (getOffset(offset[0], offset[1]) + le > maxLe[0] + maxLe[1]) {
+            if (twoBytesToInt(offset[0], offset[1]) + le > twoBytesToInt(maxLe[0], maxLe[1])) {
                 return new int[]{0x6C, 0x00};
             }
             int[] fileContent = Utils.byteArrayToIntArray(getFileContent());
@@ -234,7 +229,11 @@ public class APDUProcessor {
         int[] offset = {apdu[2], apdu[3]};
         int lc = apdu[4];
         // TODO: 14/02/2019 check offset + lc <= maxLc, sinon return 6A87
-        int[] contentToWrite = Arrays.copyOfRange(apdu, 6, 6 + (lc - 2));
+        int[] maxLc = Utils.byteArrayToIntArray(getFileSubContent(ccFile, 5, 2));
+        if (twoBytesToInt(offset[0], offset[1]) + lc > twoBytesToInt(maxLc[0], maxLc[1])) {
+            return new int[]{0x6A, 0x87};
+        }
+        int[] contentToWrite = Arrays.copyOfRange(apdu, 5, 5 + lc);
         int[] resToPrint = new int[contentToWrite.length];
         for (int i = 0; i < contentToWrite.length; i++) {
             resToPrint[i] = contentToWrite[i];
@@ -265,10 +264,6 @@ public class APDUProcessor {
         return Arrays.equals(returnedCode, new int[]{0x03, 0x90, 0x00});
     }
 
-    private int getOffset(int b0, int b1) {
-        return (int) (b0 * Math.pow(16, 2) + b1);
-    }
-
     /**
      * Returns the content from the CC or NDEF file.
      *
@@ -277,7 +272,6 @@ public class APDUProcessor {
     private byte[] getFileContent() throws IOException {
         // TODO: 14/02/2019 check this
         String content = getFileAsString(selectedFile);
-        String[] array = content.replaceAll("..(?!$)", "$0 ").split(" ");
         return Utils.hexStringToByteArray(content);
     }
 
@@ -287,8 +281,21 @@ public class APDUProcessor {
      * @return
      */
     private byte[] getFileSubContent(int offset, int le) throws IOException {
-        String content = getFileAsString(selectedFile).substring(2 * offset, 2 * (offset + le));
-        return Utils.hexStringToByteArray(content);
+        return getFileSubContent(selectedFile, offset, le);
+    }
+    /**
+     * Returns a sub part the content from the CC or NDEF file.
+     *
+     * @return
+     */
+    private byte[] getFileSubContent(File file, int offset, int le) {
+        try {
+            String content = getFileAsString(file).substring(2 * offset, 2 * (offset + le));
+            return Utils.hexStringToByteArray(content);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return new byte[2];
+        }
     }
 
     private String getFileAsStringClassic(File file) throws IOException {

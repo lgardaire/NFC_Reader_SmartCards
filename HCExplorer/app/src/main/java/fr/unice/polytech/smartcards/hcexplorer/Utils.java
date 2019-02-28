@@ -39,4 +39,8 @@ public class Utils {
         return result;
     }
 
+    public static int twoBytesToInt(int b0, int b1) {
+        return (int) (b0 * Math.pow(16, 2) + b1);
+    }
+
 }
