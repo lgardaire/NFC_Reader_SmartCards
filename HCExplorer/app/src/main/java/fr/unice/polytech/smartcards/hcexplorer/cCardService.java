@@ -13,6 +13,7 @@ public class cCardService extends HostApduService {
 
     @Override
     public byte[] processCommandApdu(byte[] apdu, Bundle bundle) {
+
         int[] apduUnsigned = new int[apdu.length];
         for (byte i = 0; i < apdu.length; i++) {
             apduUnsigned[i] = apdu[i] & 0xFF;

@@ -1,10 +1,14 @@
+import android.content.Intent;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.Arrays;
 
 import fr.unice.polytech.smartcards.hcexplorer.APDUProcessor;
+import fr.unice.polytech.smartcards.hcexplorer.Utils;
 
 /**
  * Created by user on 27/02/2019.
@@ -13,6 +17,18 @@ import fr.unice.polytech.smartcards.hcexplorer.APDUProcessor;
 public class TestClass {
 
     public static void main(String[] args) {
+        byte[] res = new byte[2];
+        byte[] i = BigInteger.valueOf(0x100).toByteArray();
+        if(i.length == 2){
+            res = i;
+        } else {
+            res[0] = 0;
+            res[1] = i[0];
+        }
+
+        System.out.println(Arrays.toString(res));
+
+
         File ccFile = new File(APDUProcessor.CC_FILE_NAME);
         File ndefFile = new File(APDUProcessor.NDEF_FILE_NAME);
 
@@ -30,10 +46,15 @@ public class TestClass {
         exec(processor, new int[]{0x00, 0xB0, 0x00, 0x00, 0x0F});
         exec(processor, new int[]{0x00, 0xA4, 0x00, 0x0C, 0x02, 0x00, 0x04});
         exec(processor, new int[]{0x00, 0xB0, 0x00, 0x00, 0x03});
+        exec(processor, new int[]{0x00, 0xD6, 0x00, 0x00, 0x06, 0x04, 0x62, 0x69, 0x74, 0x65});
     }
 
     private static void exec(APDUProcessor processor, int[] apdu){
-        int[] res = processor.processCommandApdu(apdu);
-        System.out.println(Arrays.toString(res));
+        byte[] res = Utils.intArrayToByteArray(processor.processCommandApdu(apdu));
+        String[] beautify = new String[res.length];
+        for(int i = 0; i < res.length; i++){
+            beautify[i] = String.format("0x%02X", res[i]);
+        }
+        System.out.println(Arrays.toString(beautify));
     }
 }

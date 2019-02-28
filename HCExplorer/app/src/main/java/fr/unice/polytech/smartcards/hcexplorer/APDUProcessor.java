@@ -13,7 +13,9 @@ import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 
+import static fr.unice.polytech.smartcards.hcexplorer.Utils.byteArrayToIntArray;
 import static fr.unice.polytech.smartcards.hcexplorer.Utils.intArrayToByteArray;
+import static fr.unice.polytech.smartcards.hcexplorer.Utils.intToByteArray;
 
 /**
  * Created by user on 27/02/2019.
@@ -200,14 +202,14 @@ public class APDUProcessor {
         int le = apdu[4];
         // TODO: 14/02/2019 check offset + le <= maxLe, sinon return 6C00
         try {
-            int[] maxLe = Utils.byteArrayToIntArray(getFileContent(3, 2));
-            if (offset[0] + offset[1] + le > maxLe[0] + maxLe[1]) {
+            int[] maxLe = Utils.byteArrayToIntArray(getFileSubContent(3, 2));
+            if (getOffset(offset[0], offset[1]) + le > maxLe[0] + maxLe[1]) {
                 return new int[]{0x6C, 0x00};
             }
-            int[] fileContent = Utils.byteArrayToIntArray(getFileContent(offset[0] + offset[1], le));
-            int[] ccLen = new int[]{fileContent.length + 1};
+            int[] fileContent = Utils.byteArrayToIntArray(getFileContent());
+            int[] ccLen = byteArrayToIntArray(intToByteArray(fileContent.length + 1, 2));
             int[] returnCode = new int[]{0x90, 0x00};
-            int[] resArray = new int[fileContent.length + 3];
+            int[] resArray = new int[fileContent.length + ccLen.length + returnCode.length];
             System.arraycopy(ccLen, 0, resArray, 0, ccLen.length);
             System.arraycopy(fileContent, 0, resArray, ccLen.length, fileContent.length);
             System.arraycopy(returnCode, 0, resArray, ccLen.length + fileContent.length, returnCode.length);
@@ -232,7 +234,7 @@ public class APDUProcessor {
         int[] offset = {apdu[2], apdu[3]};
         int lc = apdu[4];
         // TODO: 14/02/2019 check offset + lc <= maxLc, sinon return 6A87
-        int[] contentToWrite = Arrays.copyOfRange(apdu, 5, 5 + lc);
+        int[] contentToWrite = Arrays.copyOfRange(apdu, 6, 6 + (lc - 2));
         int[] resToPrint = new int[contentToWrite.length];
         for (int i = 0; i < contentToWrite.length; i++) {
             resToPrint[i] = contentToWrite[i];
@@ -240,9 +242,18 @@ public class APDUProcessor {
         return writeToFile(resToPrint);
     }
 
+    private int[] writeToFileClassic(int[] contentToWrite) {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(selectedFile))) {
+            bw.write(new String(intArrayToByteArray(contentToWrite), Charset.forName("UTF-8")));
+            return new int[]{0x03, 0x90, 0x00}; // OK
+        } catch (IOException e) {
+            e.printStackTrace();
+            return new int[]{0x42, 0x69}; // exception management
+        }
+    }
     private int[] writeToFile(int[] contentToWrite) {
-        try {
-            new BufferedWriter(new FileWriter(selectedFile)).write(new String(intArrayToByteArray(contentToWrite), Charset.forName("UTF-8")));
+        try (FileOutputStream fos = context.openFileOutput(selectedFile.getName(), Context.MODE_PRIVATE)) {
+            fos.write(intArrayToByteArray(contentToWrite));
             return new int[]{0x03, 0x90, 0x00}; // OK
         } catch (IOException e) {
             e.printStackTrace();
@@ -254,25 +265,53 @@ public class APDUProcessor {
         return Arrays.equals(returnedCode, new int[]{0x03, 0x90, 0x00});
     }
 
+    private int getOffset(int b0, int b1) {
+        return (int) (b0 * Math.pow(16, 2) + b1);
+    }
+
     /**
      * Returns the content from the CC or NDEF file.
      *
      * @return
      */
-    private byte[] getFileContent(int offset, int le) throws IOException {
+    private byte[] getFileContent() throws IOException {
         // TODO: 14/02/2019 check this
-        String content = getFileAsString(selectedFile).substring(2 * offset, 2 * (offset + le));
+        String content = getFileAsString(selectedFile);
         String[] array = content.replaceAll("..(?!$)", "$0 ").split(" ");
-        return (Utils.hexStringToByteArray(content));
-
+        return Utils.hexStringToByteArray(content);
     }
 
-    private String getFileAsString(File file) throws IOException {
+    /**
+     * Returns a sub part the content from the CC or NDEF file.
+     *
+     * @return
+     */
+    private byte[] getFileSubContent(int offset, int le) throws IOException {
+        String content = getFileAsString(selectedFile).substring(2 * offset, 2 * (offset + le));
+        return Utils.hexStringToByteArray(content);
+    }
+
+    private String getFileAsStringClassic(File file) throws IOException {
         StringBuilder sb = new StringBuilder();
         BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
         String line;
         while ((line = br.readLine()) != null) {
             sb.append(line);
+        }
+        return sb.toString();
+    }
+
+    private String getFileAsString(File file) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        try (FileInputStream in = context.openFileInput(file.getName())) {
+            InputStreamReader inputStreamReader = new InputStreamReader(in);
+            BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+            String line;
+            while ((line = bufferedReader.readLine()) != null) {
+                sb.append(line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
         return sb.toString();
     }

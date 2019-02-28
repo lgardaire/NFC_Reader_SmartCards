@@ -31,4 +31,12 @@ public class Utils {
         return data;
     }
 
+    public static byte[] intToByteArray(int i, int nbBytes) {
+        byte[] result = new byte[nbBytes];
+        for (int j = 0, k = nbBytes; j < nbBytes; j++, k--) {
+            result[j] = (byte) (i >> 8 * (k - 1));
+        }
+        return result;
+    }
+
 }
