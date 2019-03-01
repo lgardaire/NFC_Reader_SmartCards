@@ -180,13 +180,22 @@ namespace CSharpNETTestASKCSCDLL
                                     // iterations to analyse all records, startIndex is index to know where is the start of the current record
                                     while (startIndex < totalLength)
                                     {
-                                        Tuple<List<MessageContent>, bool> temporaryResult = analyseData(result, startIndex);
-                                        messages.AddRange(temporaryResult.Item1);
-                                        if (!temporaryResult.Item2) { 
-                                            startIndex = temporaryResult.Item1[temporaryResult.Item1.Count - 1].lastIndex;
-                                        } else
+                                        try
                                         {
-                                            break;
+                                            Tuple<List<MessageContent>, bool> temporaryResult = analyseData(result, startIndex);
+                                            messages.AddRange(temporaryResult.Item1);
+                                            if (!temporaryResult.Item2)
+                                            {
+                                                startIndex = temporaryResult.Item1[temporaryResult.Item1.Count - 1].lastIndex;
+                                            }
+                                            else
+                                            {
+                                                break;
+                                            }
+                                        }
+                                        catch
+                                        {
+
                                         }
                                     }
                                     //loop to display the records in the UI 
@@ -233,6 +242,7 @@ namespace CSharpNETTestASKCSCDLL
             }
             catch
             {
+
                 MessageBox.Show("Error on trying do deal with reader");
             }
             AskReaderLib.CSC.Close();

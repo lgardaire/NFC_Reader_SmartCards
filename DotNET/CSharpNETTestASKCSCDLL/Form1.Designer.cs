@@ -128,10 +128,11 @@ namespace CSharpNETTestASKCSCDLL
             // 
             // textBox2
             // 
+            this.textBox2.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.textBox2.Location = new System.Drawing.Point(455, 12);
             this.textBox2.Name = "textBox2";
             this.textBox2.ReadOnly = true;
-            this.textBox2.Size = new System.Drawing.Size(124, 20);
+            this.textBox2.Size = new System.Drawing.Size(124, 13);
             this.textBox2.TabIndex = 12;
             this.textBox2.Text = "Choose your record type";
             this.textBox2.TextChanged += new System.EventHandler(this.textBox2_TextChanged);
@@ -153,19 +154,25 @@ namespace CSharpNETTestASKCSCDLL
             // 
             // textBoxContent
             // 
+            this.textBoxContent.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Italic);
+            this.textBoxContent.ForeColor = System.Drawing.Color.Gray;
             this.textBoxContent.Location = new System.Drawing.Point(528, 61);
             this.textBoxContent.Name = "textBoxContent";
             this.textBoxContent.PlaceHolderText = "Content here";
             this.textBoxContent.Size = new System.Drawing.Size(187, 20);
             this.textBoxContent.TabIndex = 17;
+            this.textBoxContent.Text = "Content here";
             // 
             // textBoxPrefix
             // 
+            this.textBoxPrefix.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Italic);
+            this.textBoxPrefix.ForeColor = System.Drawing.Color.Gray;
             this.textBoxPrefix.Location = new System.Drawing.Point(455, 61);
             this.textBoxPrefix.Name = "textBoxPrefix";
             this.textBoxPrefix.PlaceHolderText = "Prefix here";
             this.textBoxPrefix.Size = new System.Drawing.Size(67, 20);
             this.textBoxPrefix.TabIndex = 18;
+            this.textBoxPrefix.Text = "Prefix here";
             // 
             // Form1
             // 
