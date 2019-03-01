@@ -16,14 +16,7 @@ public class cCardService extends HostApduService {
     @Override
     public byte[] processCommandApdu(byte[] apdu, Bundle bundle) {
         System.out.println("Received APDU : "+ Arrays.toString(Utils.hexPrint(apdu)));
-        int[] apduUnsigned = new int[apdu.length];
-        for (byte i = 0; i < apdu.length; i++) {
-            if(apdu[i] < 0){
-                apduUnsigned[i] = apdu[i] & 0xFF;
-            } else {
-                apduUnsigned[i] = apdu[i];
-            }
-        }
+        int[] apduUnsigned = Utils.byteArrayToIntArray(apdu);
         byte[] result = Utils.intArrayToByteArray(apduProcessor.processCommandApdu(apduUnsigned));
         System.out.println("Send response : "+ Arrays.toString(Utils.hexPrint(result)));
         return result;

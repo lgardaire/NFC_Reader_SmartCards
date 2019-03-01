@@ -35,10 +35,10 @@ public class Utils {
     public static int[] byteArrayToIntArray(byte[] byteArray) {
         int[] res = new int[byteArray.length];
         for (int i = 0; i < byteArray.length; i++) {
-            if(res[i] < 0){
+            if(byteArray[i] < 0){
                 res[i] = byteArray[i] & 0xFF;
             } else {
-                res[i] = (int) byteArray[i];
+                res[i] = byteArray[i];
             }
         }
         return res;

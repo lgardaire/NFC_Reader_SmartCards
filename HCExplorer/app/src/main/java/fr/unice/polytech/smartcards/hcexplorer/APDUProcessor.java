@@ -50,8 +50,8 @@ public class APDUProcessor {
 
     public APDUProcessor(Context context) {
         this.context = context;
-        ccFile = createFile(CC_FILE_NAME, CC_FILE_CONTENT_BYTES);
-        ndefFile = createFile(NDEF_FILE_NAME, NDEF_FILE_CONTENT_BYTES);
+        ccFile = createFile(CC_FILE_NAME, CC_FILE_CONTENT);
+        ndefFile = createFile(NDEF_FILE_NAME, NDEF_FILE_CONTENT);
     }
 
     public APDUProcessor(File ccFile, File ndefFile) {
@@ -95,15 +95,15 @@ public class APDUProcessor {
 
     }
 
-    private File createFile(String filename, int[] fileContent) {
-//        String[] array = fileContent.replaceAll("..(?!$)", "$0 ").split(" ");
-//        byte[] bytes = new byte[array.length];
-//        for(int i=0; i<bytes.length; i++){
-//            bytes[i] = (byte) (Integer.parseInt(array[i],16) & 0xff);
-//        }
+    private File createFile(String filename, String fileContent) {
+        String[] array = fileContent.replaceAll("..(?!$)", "$0 ").split(" ");
+        byte[] bytes = new byte[array.length];
+        for(int i=0; i<bytes.length; i++){
+            bytes[i] = (byte) (Integer.parseInt(array[i],16) & 0xff);
+        }
         File file = new File(context.getFilesDir(), filename);
         try (FileOutputStream fos = context.openFileOutput(file.getName(), Context.MODE_PRIVATE)) {
-            fos.write(Utils.intArrayToByteArray(fileContent));
+            fos.write(bytes);
         } catch (IOException e) {
             e.printStackTrace();
         }
