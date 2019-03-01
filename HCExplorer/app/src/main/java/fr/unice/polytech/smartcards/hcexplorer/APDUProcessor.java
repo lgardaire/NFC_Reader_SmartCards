@@ -14,7 +14,6 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 
 import static fr.unice.polytech.smartcards.hcexplorer.Utils.byteArrayToIntArray;
-import static fr.unice.polytech.smartcards.hcexplorer.Utils.hexStringToByteArray;
 import static fr.unice.polytech.smartcards.hcexplorer.Utils.intArrayToByteArray;
 import static fr.unice.polytech.smartcards.hcexplorer.Utils.intToByteArray;
 import static fr.unice.polytech.smartcards.hcexplorer.Utils.twoBytesToInt;
@@ -29,8 +28,11 @@ public class APDUProcessor {
 
     public static final String NDEF_FILE_NAME = "ndef_file.txt";
     public static final String CC_FILE_NAME = "cc_file.txt";
-    public static final String CC_FILE_CONTENT = "12000F20003B00340406E104080000";
+    public static final String CC_FILE_CONTENT = "000F20003B00340406E104080000";
+    public static final int[] CC_FILE_CONTENT_BYTES = new int[]{0x00, 0x0F, 0x20, 0x00, 0x3B, 0x00, 0x34, 0x04, 0x06, 0xE1, 0x04, 0x08, 0x00, 0x00};
     public static final String NDEF_FILE_CONTENT = "0022D1021D5370910111550170617261676F6E2D72666964EE636F6D5101045400504944";
+    public static final int[] NDEF_FILE_CONTENT_BYTES =
+            new int[]{0x00, 0x22, 0xD1, 0x02, 0x02, 0x1D, 0x53, 0x70, 0x91, 0x01, 0x11, 0x55, 0x01, 0x70, 0x61, 0x72, 0x61, 0x67, 0x6F, 0x6E, 0x2D, 0x72, 0x66, 0x69, 0x64, 0xEE, 0x63, 0x6F, 0x6D, 0x51, 0x01, 0x04, 0x54, 0x00, 0x50, 0x49, 0x44};
 
     private File ndefFile = null;
     private File ccFile = null;
@@ -94,10 +96,14 @@ public class APDUProcessor {
     }
 
     private File createFile(String filename, String fileContent) {
-//        String[] array = fileContent.replaceAll("..(?!$)", "$0 ").split(" ");
+        String[] array = fileContent.replaceAll("..(?!$)", "$0 ").split(" ");
+        byte[] bytes = new byte[array.length];
+        for(int i=0; i<bytes.length; i++){
+            bytes[i] = (byte) (Integer.parseInt(array[i],16) & 0xff);
+        }
         File file = new File(context.getFilesDir(), filename);
         try (FileOutputStream fos = context.openFileOutput(file.getName(), Context.MODE_PRIVATE)) {
-            fos.write(hexStringToByteArray(fileContent));
+            fos.write(bytes);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -202,7 +208,7 @@ public class APDUProcessor {
                 return new int[]{0x6C, 0x00};
             }
             int[] fileContent = Utils.byteArrayToIntArray(getFileContent());
-            int[] ccLen = byteArrayToIntArray(intToByteArray(fileContent.length + 1, 2));
+            int[] ccLen = selectedFile == ccFile ? byteArrayToIntArray(intToByteArray(fileContent.length + 1, 2)) : new int[0];
             int[] returnCode = new int[]{0x90, 0x00};
             int[] resArray = new int[fileContent.length + ccLen.length + returnCode.length];
             System.arraycopy(ccLen, 0, resArray, 0, ccLen.length);
@@ -241,7 +247,7 @@ public class APDUProcessor {
         return writeToFile(resToPrint);
     }
 
-    private int[] writeToFileClassic(int[] contentToWrite) {
+    private int[] writeToFile2(int[] contentToWrite) {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(selectedFile))) {
             bw.write(new String(intArrayToByteArray(contentToWrite), Charset.forName("UTF-8")));
             return new int[]{0x03, 0x90, 0x00}; // OK
@@ -271,8 +277,7 @@ public class APDUProcessor {
      */
     private byte[] getFileContent() throws IOException {
         // TODO: 14/02/2019 check this
-        String content = getFileAsString(selectedFile);
-        return Utils.hexStringToByteArray(content);
+        return getFileAsString(selectedFile).getBytes();
     }
 
     /**
@@ -290,15 +295,14 @@ public class APDUProcessor {
      */
     private byte[] getFileSubContent(File file, int offset, int le) {
         try {
-            String content = getFileAsString(file).substring(2 * offset, 2 * (offset + le));
-            return Utils.hexStringToByteArray(content);
+            return getFileAsString(file).substring(2 * offset, 2 * (offset + le)).getBytes();
         } catch (IOException e) {
             e.printStackTrace();
             return new byte[2];
         }
     }
 
-    private String getFileAsStringClassic(File file) throws IOException {
+    private String getFileAsString2(File file) throws IOException {
         StringBuilder sb = new StringBuilder();
         BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
         String line;

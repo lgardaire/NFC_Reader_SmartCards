@@ -1,5 +1,9 @@
 package fr.unice.polytech.smartcards.hcexplorer;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+
 /**
  * Created by user on 27/02/2019.
  */
@@ -12,11 +16,30 @@ public class Utils {
         }
         return res;
     }
+    public static byte[] intArrayToByteArrayToStore(int[] values)
+    {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(baos);
+        for (int value : values) {
+            try {
+                dos.writeInt(value);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return baos.toByteArray();
+    }
+
 
     public static int[] byteArrayToIntArray(byte[] byteArray) {
         int[] res = new int[byteArray.length];
         for (int i = 0; i < byteArray.length; i++) {
-            res[i] = byteArray[i];
+            if(byteArray[i] < 0){
+                res[i] = byteArray[i] & 0xFF;
+            } else {
+                res[i] = byteArray[i];
+            }
         }
         return res;
     }
@@ -41,6 +64,14 @@ public class Utils {
 
     public static int twoBytesToInt(int b0, int b1) {
         return (int) (b0 * Math.pow(16, 2) + b1);
+    }
+
+    public static String[] hexPrint(byte[] array){
+        String[] beautify = new String[array.length];
+        for(int i = 0; i < array.length; i++){
+            beautify[i] = String.format("0x%02X", array[i]);
+        }
+        return beautify;
     }
 
 }

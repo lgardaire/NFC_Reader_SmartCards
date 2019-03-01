@@ -51,10 +51,6 @@ public class TestClass {
 
     private static void exec(APDUProcessor processor, int[] apdu){
         byte[] res = Utils.intArrayToByteArray(processor.processCommandApdu(apdu));
-        String[] beautify = new String[res.length];
-        for(int i = 0; i < res.length; i++){
-            beautify[i] = String.format("0x%02X", res[i]);
-        }
-        System.out.println(Arrays.toString(beautify));
+        System.out.println(Arrays.toString(Utils.hexPrint(res)));
     }
 }
