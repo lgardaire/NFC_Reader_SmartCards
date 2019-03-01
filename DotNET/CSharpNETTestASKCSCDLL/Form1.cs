@@ -10,6 +10,8 @@ namespace CSharpNETTestASKCSCDLL
 {
     public partial class Form1 : Form
     {
+        List<Tuple<String[], String>> recordsToWrite = new List<Tuple<String[], String>>();
+
         public Form1()
         {
             InitializeComponent();
@@ -116,11 +118,10 @@ namespace CSharpNETTestASKCSCDLL
                                 Status = AskReaderLib.CSC.CSC_ISOCommand(byBuffIn, byBuffIn.Length, byBuffOut, ref iLenOut);
                                 if ((Status == AskReaderLib.CSC.RCSC_Ok) && (iLenOut > 2))
                                 {
-
                                     int maxSizeToRead = Convert.ToInt32(byBuffOut[1].ToString() + byBuffOut[2].ToString()) + 2;
 
                                     List<Byte> result = new List<Byte>();
-                                    if (maxSizeToRead < maxLe)
+                                    if (maxSizeToRead < maxLe) //need one iteration to read all data
                                     {
                                         iLenOut = maxLe;
                                         Byte[] tmp = BitConverter.GetBytes(maxSizeToRead);
@@ -130,7 +131,7 @@ namespace CSharpNETTestASKCSCDLL
                                         {
                                             result.AddRange(byBuffOut);
                                         }
-                                    } else
+                                    } else //need multiple iterations
                                     {
                                     
                                         int iterations = (maxSizeToRead / maxLe) + 1;
@@ -138,10 +139,11 @@ namespace CSharpNETTestASKCSCDLL
                                         {
                                             int size = maxLe;
                                             Byte[] offset;
-                                            if (i == iterations - 1 && iterations > 1)
+                                            if (i == iterations - 1 && iterations > 1) //no need to read maxLe size in last iteration
                                             {
                                                 size = maxSizeToRead - (maxLe * i) + 1;
                                             }
+                                            //set the offset
                                             if(i == 0)
                                             {
                                                 offset = BitConverter.GetBytes(0);
@@ -150,6 +152,7 @@ namespace CSharpNETTestASKCSCDLL
                                                 offset = BitConverter.GetBytes(i * maxLe -1);
                                             }
                                             byBuffIn = new byte[] { 0x00, 0xB0, offset[1], offset[0], maxLe2 };
+                                            //read on card
                                             Status = AskReaderLib.CSC.CSC_ISOCommand(byBuffIn, byBuffIn.Length, byBuffOut, ref iLenOut);
                                             if ((Status == AskReaderLib.CSC.RCSC_Ok) && (iLenOut > 2) && (byBuffOut[iLenOut - 2] == 0x90) && (byBuffOut[iLenOut - 1] == 0x00))
                                             {
@@ -174,6 +177,7 @@ namespace CSharpNETTestASKCSCDLL
                                     long startIndex = 3;
                                     int totalLength = result.Count;
                                     List<MessageContent> messages = new List<MessageContent>();
+                                    // iterations to analyse all records, startIndex is index to know where is the start of the current record
                                     while (startIndex < totalLength)
                                     {
                                         Tuple<List<MessageContent>, bool> temporaryResult = analyseData(result, startIndex);
@@ -185,8 +189,10 @@ namespace CSharpNETTestASKCSCDLL
                                             break;
                                         }
                                     }
+                                    //loop to display the records in the UI 
                                     for(int i = 0; i < messages.Count; i++)
                                     {
+                                        //if it is a Text record
                                         if(messages[i].language != "")
                                         {
                                             textBox1.AppendText(messages[i].payload + " (Language: " + messages[i].language + ")");
@@ -200,8 +206,24 @@ namespace CSharpNETTestASKCSCDLL
                                     Console.Write("End of reading");
 
                                 }
+                                else
+                                {
+                                    MessageBox.Show("Can't read on card");
+                                }
+                            }
+                            else
+                            {
+                                MessageBox.Show("Can't select EF NDEF");
                             }
                         }
+                        else
+                        {
+                            MessageBox.Show("Can't select CC File");
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show("Can't select application");
                     }
                 }
                 else if (Com == 0x6F)
@@ -221,12 +243,15 @@ namespace CSharpNETTestASKCSCDLL
             return binary[4] == '1';
         }
 
+        //Function to analyse the records payloads and transform them
         private Tuple<List<MessageContent>, bool> analyseData(List<Byte> content, long startIndex)
         {
             try { 
+                //Analyse tehe first byte containing useful informations
                 BinaryInformations binaryInfos = new BinaryInformations(content.ToArray()[startIndex]);
                 if (binaryInfos.isWellKnownType())
                 {
+                    //Get all needed data in the payload
                     int payLoadLengthLength = binaryInfos.getLengthOfPayloadLength();
                     bool idLengthPresent = binaryInfos.isIdLengthPresent();
 
@@ -234,6 +259,7 @@ namespace CSharpNETTestASKCSCDLL
                     long typeLength = convertByte(content.ToArray()[startIndex + 1]);
                     int idLengthLength = idLengthPresent ? 1 : 0;
                 
+                    //analyse the type of record
                     long type = -1;
                     if (typeLength != 0)
                     {
@@ -243,12 +269,14 @@ namespace CSharpNETTestASKCSCDLL
                         type = 0;
                     }
 
+                    //find the Id length
                     long idLength = 0;
                     if (idLengthLength != 0)
                     {
                         idLength = convertSublistByteToLong(content, startIndex + payLoadLengthLength + 1, idLengthLength);
                     }
 
+                    //find the start index in the record where the data is
                     long payloadStartIndex;
                     if (type != 0)
                     {
@@ -259,26 +287,29 @@ namespace CSharpNETTestASKCSCDLL
                     }
                     List<Byte> payload = getSubListFrom(content.ToArray(), payloadStartIndex, Math.Min(payloadLength, content.Count-payloadStartIndex));
 
-                    if (type == 0x5370) //is SmartPoster
+                    if (type == 0x5370) // if it is a SmartPoster
                     {
+                        //store the last index of each record in the SmartPoster to separate them
                         List<MessageContent> result = new List<MessageContent>();
                         long lastIndex = 0;
                         while(lastIndex < payloadLength)
                         {
+                            // analyse each record
                             Tuple<List<MessageContent>, bool> messContent = analyseData(payload, lastIndex);
                             result.Add(messContent.Item1[0]);
                             lastIndex = messContent.Item1[0].lastIndex;
                         }
                         return new Tuple<List<MessageContent>, bool>(result, binaryInfos.isLast());
-                    } else
+                    } else //if it is not a SmartPoster
                     {
+                        //just analyse the record
                         List<MessageContent> messageResult = new List<MessageContent>();
                         messageResult.Add(new MessageContent(payload, type, payloadStartIndex+payloadLength));
                         return new Tuple<List<MessageContent>, bool>(messageResult, binaryInfos.isLast());
                     }
                 } else
                 {
-                    return new Tuple<List<MessageContent>, bool>(new List<MessageContent>(), binaryInfos.isLast());
+                    return new Tuple<List<MessageContent>, bool>(new List<MessageContent>(), true);
                 } 
             } catch {
                 return new Tuple<List<MessageContent>, bool>(new List<MessageContent>(), false);
@@ -318,6 +349,7 @@ namespace CSharpNETTestASKCSCDLL
             return sublist;
         }
 
+        //Function to write on the card
         private void button2_Click(object sender, EventArgs e)
         {
             AskReaderLib.CSC.sCARD_SearchExtTag SearchExtender;
@@ -401,19 +433,37 @@ namespace CSharpNETTestASKCSCDLL
                             Status = AskReaderLib.CSC.CSC_ISOCommand(byBuffIn, byBuffIn.Length, byBuffOut, ref iLenOut);
                             if ((Status == AskReaderLib.CSC.RCSC_Ok) && (iLenOut > 2) && (byBuffOut[iLenOut - 2] == 0x90) && (byBuffOut[iLenOut - 1] == 0x00))
                             {
+                                //prepare the payload to write
+                                //recordsToWrite contains the data the user input by the UI
                                 List<byte> payload = new List<byte>();
-                                payload.AddRange(transformDataForText("La belle histoire", true, false));
-                                payload.AddRange(transformDataForURI("http://", "www.apple.com", false, false));
-                                payload.AddRange(transformDataForBinary("PLS", false, false));
-                                payload.AddRange(transformDataForBinary("POLYTECH", false, false));
-                                payload.AddRange(transformDataForBinary("POLYTECH-SIAZERTYUIOPQSDFGHJKLMWXCVBNAZERTYUIOPQSDFGHJKLMWXCVBN", false, false));
-                                payload.AddRange(transformDataForBinary("POLYTECH-SIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZERTYUIOPQSDFGHJKLMWXCVBNAZERTYUIOPQSDFGHJKLMWXCVBN", false, true));
+                                for(int i = 0; i < recordsToWrite.Count; i++)
+                                {
+                                    //handle messageEnd and messageBegin
+                                    bool first = false;
+                                    if (i == 0) first = true;
+                                    bool last = false;
+                                    if (i == recordsToWrite.Count - 1) last = true;
+
+                                    //create record depending on the type
+                                    string type = recordsToWrite[i].Item2;
+                                    if(type == "t")
+                                    {
+                                        payload.AddRange(transformDataForText(recordsToWrite[i].Item1[0], first, last));
+                                    } else if (type == "u")
+                                    {
+                                        payload.AddRange(transformDataForURI(recordsToWrite[i].Item1[1], recordsToWrite[i].Item1[0], first, last));
+                                    } else if (type == "r")
+                                    {
+                                        payload.AddRange(transformDataForBinary(recordsToWrite[i].Item1[0], first, last));
+                                    }
+                                }
+                                textBox3.Text = "";
+                                recordsToWrite = new List<Tuple<string[], string>>();
 
                                 iLenOut = 300;
 
                                 // write Binary NDEF
                                 int Lc = Convert.ToInt32(maxLc1.ToString() + maxLc2.ToString());
-                                int iterations = (payload.Count-2) / Lc + 1;
                                 Byte[] dataLengthBytes = BitConverter.GetBytes(payload.Count);
                                 Byte[] payloadLengthBytes = BitConverter.GetBytes(payload.Count + 2);
 
@@ -520,6 +570,7 @@ namespace CSharpNETTestASKCSCDLL
             return Convert.ToByte(firstByte, 2);
         }
 
+        //create record of Text type following the norm
         private List<byte> createTextPayload(String content, String language)
         {
             List<byte> payloadBytes = new List<byte> { };
@@ -538,6 +589,7 @@ namespace CSharpNETTestASKCSCDLL
             return payloadBytes;
         }
 
+        //create record of URI type following the norm
         private List<byte> createURIPayload(String prefix, String restURI)
         {
             List<byte> payloadBytes = new List<byte> { };
@@ -556,6 +608,7 @@ namespace CSharpNETTestASKCSCDLL
             return payloadBytes;
         }
 
+        //dictionnary of each usable URI prefixes
         private Dictionary<String, Byte> setDictionaryPrefix()
         {
             Dictionary<String, Byte> prefixValue = new Dictionary<string, byte>();
@@ -596,6 +649,35 @@ namespace CSharpNETTestASKCSCDLL
             prefixValue["urn:epc:"] = 0x22;
             prefixValue["urn:nfc:"] = 0x23;
             return prefixValue;
+        }
+
+        //Add button to add a record to the records to write
+        private void button3_Click(object sender, EventArgs e)
+        {
+            String type = comboBoxType.Text;
+            if (type == "Text")
+            {
+                
+                recordsToWrite.Add(new Tuple<String[], String>(new String[] { textBoxContent.Text }, "t"));
+                textBox3.AppendText("Text : "+ textBoxContent.Text);
+                textBox3.AppendText(Environment.NewLine);
+                textBoxContent.Text = "";
+            }
+            else if (type == "URI")
+            {
+                recordsToWrite.Add(new Tuple<String[], String>(new String[] { textBoxContent.Text, textBoxPrefix.Text }, "u"));
+                textBox3.AppendText("URI : " + textBoxPrefix.Text + textBoxContent.Text);
+                textBox3.AppendText(Environment.NewLine);
+                textBoxContent.Text = "";
+                textBoxPrefix.Text = "";
+            }
+            else if (type == "Raw")
+            {
+                recordsToWrite.Add(new Tuple<String[], String>(new String[] { textBoxContent.Text }, "r"));
+                textBox3.AppendText("Raw : " + textBoxContent.Text);
+                textBox3.AppendText(Environment.NewLine);
+                textBoxContent.Text = "";
+            }
         }
     }
 }

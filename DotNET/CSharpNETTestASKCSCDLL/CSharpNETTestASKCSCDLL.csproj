@@ -57,6 +57,9 @@
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
     <Compile Include="MessageContent.cs" />
+    <Compile Include="PlaceHolderTextBox.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="PrefixURINotFoundException.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
