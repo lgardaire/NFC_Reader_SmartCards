@@ -6,6 +6,8 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import org.apache.commons.io.IOUtils;
+
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -32,17 +34,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public String getNdefFileContent() {
-        StringBuilder sb = new StringBuilder();
         try (FileInputStream in = openFileInput(APDUProcessor.NDEF_FILE_NAME)) {
-            InputStreamReader inputStreamReader = new InputStreamReader(in);
-            BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-            String line;
-            while ((line = bufferedReader.readLine()) != null) {
-                sb.append(line);
-            }
+            byte[] bytes = IOUtils.toByteArray(in);
+            return new String(bytes);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return sb.toString();
+        return "";
     }
 }
