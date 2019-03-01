@@ -3,6 +3,8 @@ package fr.unice.polytech.smartcards.hcexplorer;
 import android.nfc.cardemulation.HostApduService;
 import android.os.Bundle;
 
+import java.util.Arrays;
+
 /**
  * Created by user on 07/02/2019.
  */
@@ -13,12 +15,18 @@ public class cCardService extends HostApduService {
 
     @Override
     public byte[] processCommandApdu(byte[] apdu, Bundle bundle) {
-
+        System.out.println("Received APDU : "+ Arrays.toString(Utils.hexPrint(apdu)));
         int[] apduUnsigned = new int[apdu.length];
         for (byte i = 0; i < apdu.length; i++) {
-            apduUnsigned[i] = apdu[i] & 0xFF;
+            if(apdu[i] < 0){
+                apduUnsigned[i] = apdu[i] & 0xFF;
+            } else {
+                apduUnsigned[i] = apdu[i];
+            }
         }
-        return Utils.intArrayToByteArray(apduProcessor.processCommandApdu(apduUnsigned));
+        byte[] result = Utils.intArrayToByteArray(apduProcessor.processCommandApdu(apduUnsigned));
+        System.out.println("Send response : "+ Arrays.toString(Utils.hexPrint(result)));
+        return result;
     }
 
     @Override
