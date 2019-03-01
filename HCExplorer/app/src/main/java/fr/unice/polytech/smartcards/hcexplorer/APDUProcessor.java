@@ -98,7 +98,6 @@ public class APDUProcessor {
     }
 
     private File createFile(String filename, int[] ints) {
-//        String[] array = fileContent.replaceAll("..(?!$)", "$0 ").split(" ");
         byte[] bytes = new byte[ints.length];
         for (int i = 0; i < bytes.length; i++) {
             bytes[i] = (byte) (ints[i]);
@@ -260,8 +259,13 @@ public class APDUProcessor {
     }
 
     private int[] writeToFile(int[] contentToWrite) {
+        byte[] bytes = new byte[contentToWrite.length];
+        for (int i = 0; i < bytes.length; i++) {
+            bytes[i] = (byte) (contentToWrite[i]);
+        }
         try (FileOutputStream fos = context.openFileOutput(selectedFile.getName(), Context.MODE_PRIVATE)) {
-            fos.write(intArrayToByteArray(contentToWrite));
+            fos.write(bytes);
+            fos.close();
             return new int[]{0x03, 0x90, 0x00}; // OK
         } catch (IOException e) {
             e.printStackTrace();
