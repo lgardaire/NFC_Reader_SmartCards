@@ -1,14 +1,18 @@
 package fr.unice.polytech.smartcards.hcexplorer;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.util.Arrays;
 
 /**
- * Created by user on 27/02/2019.
+ * Utility methods used in conversions
  */
 
 public class Utils {
+
+    /**
+     * Converts an array of integers in an array of bytes.
+     * @param intArray array to convert
+     * @return the converted array
+     */
     public static byte[] intArrayToByteArray(int[] intArray) {
         byte[] res = new byte[intArray.length];
         for (int i = 0; i < intArray.length; i++) {
@@ -16,22 +20,12 @@ public class Utils {
         }
         return res;
     }
-    public static byte[] intArrayToByteArrayToStore(int[] values)
-    {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        DataOutputStream dos = new DataOutputStream(baos);
-        for (int value : values) {
-            try {
-                dos.writeInt(value);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
 
-        return baos.toByteArray();
-    }
-
-
+    /**
+     * Converts an array of bytes in an array of integers.
+     * @param byteArray array to convert
+     * @return the converted array
+     */
     public static int[] byteArrayToIntArray(byte[] byteArray) {
         int[] res = new int[byteArray.length];
         for (int i = 0; i < byteArray.length; i++) {
@@ -44,16 +38,12 @@ public class Utils {
         return res;
     }
 
-    public static byte[] hexStringToByteArray(String s) {
-        int len = s.length();
-        byte[] data = new byte[len / 2];
-        for (int i = 0; i < len; i += 2) {
-            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
-                    + Character.digit(s.charAt(i + 1), 16));
-        }
-        return data;
-    }
-
+    /**
+     * Converts an integer in an array of bytes.
+     * @param i the integer to convert
+     * @param nbBytes the length of the converted number, in bytes
+     * @return the converted value
+     */
     public static byte[] intToByteArray(int i, int nbBytes) {
         byte[] result = new byte[nbBytes];
         for (int j = 0, k = nbBytes; j < nbBytes; j++, k--) {
@@ -62,16 +52,29 @@ public class Utils {
         return result;
     }
 
+    /**
+     * Converts a two bytes array in an integer
+     * @param b0 first byte
+     * @param b1 second byte
+     * @return the converted value
+     */
     public static int twoBytesToInt(int b0, int b1) {
         return (int) (b0 * Math.pow(16, 2) + b1);
     }
 
-    public static String[] hexPrint(byte[] array){
+    /**
+     * Returns an array of bytes in a String representing the same array, but with hex values.
+     * This method is mainly used for debug.
+     * eg : [144, 0] -> ["0x90", "0x00"]
+     * @param array array to convert
+     * @return the array in a String format, each number written in hexadecimal
+     */
+    public static String hexPrint(byte[] array){
         String[] beautify = new String[array.length];
         for(int i = 0; i < array.length; i++){
             beautify[i] = String.format("0x%02X", array[i]);
         }
-        return beautify;
+        return Arrays.toString(beautify);
     }
 
 }

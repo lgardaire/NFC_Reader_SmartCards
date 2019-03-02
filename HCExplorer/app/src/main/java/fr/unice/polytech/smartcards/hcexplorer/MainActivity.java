@@ -14,6 +14,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
+/**
+ * Main activity of the application
+ * The "refresh" button updates the TextBox displaying the NDEF file content
+ */
 public class MainActivity extends AppCompatActivity {
 
     @Override
