@@ -1,33 +1,19 @@
-import android.content.Intent;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.math.BigInteger;
-import java.util.Arrays;
 
 import fr.unice.polytech.smartcards.hcexplorer.APDUProcessor;
 import fr.unice.polytech.smartcards.hcexplorer.Utils;
 
 /**
- * Created by user on 27/02/2019.
+ * Test class used to send predefined arrays to the APDUProcessor and check its behaviour
+ * without needing to start an Android application.
  */
 
 public class TestClass {
 
     public static void main(String[] args) {
-        byte[] res = new byte[2];
-        byte[] i = BigInteger.valueOf(0x100).toByteArray();
-        if(i.length == 2){
-            res = i;
-        } else {
-            res[0] = 0;
-            res[1] = i[0];
-        }
-
-        System.out.println(Arrays.toString(res));
-
 
         File ccFile = new File(APDUProcessor.CC_FILE_NAME);
         File ndefFile = new File(APDUProcessor.NDEF_FILE_NAME);
@@ -51,6 +37,6 @@ public class TestClass {
 
     private static void exec(APDUProcessor processor, int[] apdu){
         byte[] res = Utils.intArrayToByteArray(processor.processCommandApdu(apdu));
-        System.out.println(Arrays.toString(Utils.hexPrint(res)));
+        System.out.println(Utils.hexPrint(res));
     }
 }
